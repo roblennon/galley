@@ -1,0 +1,172 @@
+/* Galley — annotation styling. Sizes stay readable: chips never drop
+   below 12.5px, notes track the body size. */
+
+.galley-anchor {
+  background: rgba(255, 208, 0, 0.28);
+  border-radius: 3px;
+  padding: 0.03em 0;
+}
+.theme-dark .galley-anchor {
+  background: rgba(255, 208, 0, 0.22);
+  color: inherit;
+}
+
+.galley-chip {
+  display: inline-block;
+  font-family: var(--font-monospace);
+  font-size: max(12.5px, 0.72em);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-faint);
+  background: var(--background-modifier-hover);
+  border: none;
+  border-radius: 4px;
+  padding: 0 0.4em;
+  margin-left: 0.18em;
+  vertical-align: super;
+  cursor: help;
+  user-select: none;
+}
+.galley-chip:hover {
+  color: var(--text-muted);
+}
+
+.galley-note {
+  display: inline-block;
+  background: var(--background-secondary);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: 5px;
+  padding: 0.2em 0.6em;
+  font-size: 0.95em;
+  line-height: 1.55;
+}
+.galley-note .galley-chip {
+  vertical-align: baseline;
+  margin-left: 0;
+}
+.galley-note-document {
+  border-left-width: 4px;
+  font-weight: 500;
+}
+
+.galley-edit-mark {
+  background: rgba(90, 160, 255, 0.16);
+  border-radius: 3px;
+}
+
+.galley-deletion {
+  color: var(--text-error, #c0392b);
+  text-decoration: line-through;
+}
+.galley-insertion {
+  color: var(--text-success, #27ae60);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+}
+
+.galley-comment-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1em;
+  line-height: 1.5;
+  margin-top: 0.5em;
+}
+
+/* Comments panel */
+.galley-panel {
+  padding: 0.5em 0.75em;
+  font-size: 14px;
+}
+.galley-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5em;
+}
+.galley-panel-header h4 {
+  margin: 0.3em 0;
+  font-size: 15px;
+}
+.galley-panel-errors {
+  color: var(--text-error);
+  font-size: 13.5px;
+}
+.galley-panel-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.galley-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  margin-top: 0.5em;
+}
+.galley-panel-item {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-primary);
+  padding: 0.5em 0.65em;
+}
+.galley-panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.35em;
+}
+.galley-panel-id {
+  appearance: none;
+  font-family: var(--font-monospace);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-muted);
+  background: var(--background-modifier-hover);
+  border: none;
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 0 0.5em;
+  height: auto;
+  cursor: pointer;
+}
+.galley-panel-id:hover {
+  color: var(--interactive-accent);
+}
+.galley-panel-remove {
+  appearance: none;
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
+  padding: 0;
+  cursor: pointer;
+}
+.galley-panel-remove:hover {
+  color: var(--text-error);
+  background: var(--background-modifier-hover);
+}
+.galley-panel-snippet {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-bottom: 0.2em;
+}
+.galley-panel-body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.galley-modal-hint {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0.25em 0 0.5em;
+}

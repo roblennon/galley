@@ -1,0 +1,9 @@
+{
+  "id": "galley",
+  "name": "Galley",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Inline editorial comments in your Markdown — select text, comment, and hand the document to an AI editor that answers every note.",
+  "author": "Rob Lennon",
+  "isDesktopOnly": false
+}

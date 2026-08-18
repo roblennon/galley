@@ -1,0 +1,33 @@
+{
+  "name": "@galley/obsidian",
+  "version": "0.1.0",
+  "description": "Obsidian plugin: inline editorial comments in Markdown, on the galley annotation format.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roblennon/galley.git",
+    "directory": "packages/obsidian"
+  },
+  "homepage": "https://github.com/roblennon/galley#readme",
+  "bugs": "https://github.com/roblennon/galley/issues",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs && tsc -p tsconfig.json --noEmit",
+    "dev": "node esbuild.config.mjs watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node esbuild.config.mjs && node scripts/smoke.mjs",
+    "install-to-vault": "node scripts/install-to-vault.mjs"
+  },
+  "dependencies": {
+    "@galley/codemirror": "workspace:*",
+    "@galley/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@codemirror/state": "^6.7.1",
+    "@codemirror/view": "^6.43.8",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "typescript": "^5.7.0"
+  }
+}

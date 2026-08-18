@@ -1,0 +1,26 @@
+{
+  "name": "SPEC §13.3 batch applied to §13.1 yields §13.4",
+  "input": "---\nannotation-spec: 1\n---\n\n# Q3 Review\n\nThe company {==leveraged its synergies==}{>>[a3f] say what they actually did<<}\nlast quarter, and we recieve strong signals from the market.\n\nGrowth was {--largely --}difficult for reasons outside our control, and we\nresponded as well as could be expected.\n\n{>>[b7c] this paragraph is defensive — cut or commit<<}\n",
+  "batch": {
+    "spec": 1,
+    "responses": [
+      { "comment": "a3f", "status": "patched" },
+      { "comment": "b7c", "status": "declined",
+        "note": "reads as candor rather than defensiveness" }
+    ],
+    "patches": [
+      { "type": "span", "find": "leveraged its synergies",
+        "replace": "merged two sales teams", "comments": ["a3f"] },
+      { "type": "span", "find": "we recieve", "replace": "we receive",
+        "reason": "typo" }
+    ]
+  },
+  "output": "---\nannotation-spec: 1\n---\n\n# Q3 Review\n\nThe company merged two sales teams\nlast quarter, and we receive strong signals from the market.\n\nGrowth was {--largely --}difficult for reasons outside our control, and we\nresponded as well as could be expected.\n\n{>>[b7c] this paragraph is defensive — cut or commit<<}\n",
+  "report": {
+    "appliedIndices": [0, 1],
+    "rejected": [],
+    "resolved": [{ "id": "a3f", "body": "say what they actually did" }],
+    "orphaned": [],
+    "unaddressed": ["b7c"]
+  }
+}

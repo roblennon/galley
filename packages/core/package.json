@@ -1,0 +1,36 @@
+{
+  "name": "@galley/core",
+  "version": "0.2.0",
+  "description": "Parse, author, validate, and reconcile inline Markdown annotations (constrained CriticMarkup profile with identifiers).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roblennon/galley.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/roblennon/galley#readme",
+  "bugs": "https://github.com/roblennon/galley/issues",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run && node scripts/fuzz.mjs 500",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "fuzz": "node scripts/fuzz.mjs 800"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

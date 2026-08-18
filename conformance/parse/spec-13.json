@@ -1,0 +1,27 @@
+{
+  "name": "SPEC §13.1 document decomposes into §13.2 clean text",
+  "input": "---\nannotation-spec: 1\n---\n\n# Q3 Review\n\nThe company {==leveraged its synergies==}{>>[a3f] say what they actually did<<}\nlast quarter, and we recieve strong signals from the market.\n\nGrowth was {--largely --}difficult for reasons outside our control, and we\nresponded as well as could be expected.\n\n{>>[b7c] this paragraph is defensive — cut or commit<<}\n",
+  "cleanText": "# Q3 Review\n\nThe company leveraged its synergies\nlast quarter, and we recieve strong signals from the market.\n\nGrowth was largely difficult for reasons outside our control, and we\nresponded as well as could be expected.\n",
+  "frontmatter": "---\nannotation-spec: 1\n---\n\n",
+  "comments": [
+    {
+      "id": "a3f",
+      "scope": "span",
+      "body": "say what they actually did",
+      "anchorText": "leveraged its synergies"
+    },
+    {
+      "id": "b7c",
+      "scope": "block",
+      "body": "this paragraph is defensive — cut or commit",
+      "anchorText": "Growth was largely difficult for reasons outside our control, and we\nresponded as well as could be expected."
+    }
+  ],
+  "editMarks": [
+    {
+      "kind": "deletion",
+      "original": "largely ",
+      "proposed": ""
+    }
+  ]
+}

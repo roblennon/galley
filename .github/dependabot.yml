@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      dev-tooling:
+        patterns: ["typescript", "vitest", "vite", "esbuild"]
+      codemirror:
+        patterns: ["@codemirror/*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

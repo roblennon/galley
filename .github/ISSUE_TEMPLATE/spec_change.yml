@@ -1,0 +1,39 @@
+name: Spec change
+description: Propose a change or addition to SPEC.md.
+labels: [spec]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Spec changes are cheap to propose and expensive to undo. Please read the
+        non-goals in SPEC.md §1 first — several things are deliberately excluded
+        rather than overlooked.
+  - type: textarea
+    id: document
+    attributes:
+      label: A real document the current spec handles badly
+      description: >
+        Not a hypothetical. What were you actually trying to annotate, and where
+        did the format run out?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: Which section changes, and to what.
+    validations:
+      required: true
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Would this break v1 documents?
+      description: >
+        Breaking means a conforming v1 document would parse differently or fail
+        to parse.
+      options:
+        - "No — additive only"
+        - "Yes"
+        - "Not sure"
+    validations:
+      required: true

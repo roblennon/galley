@@ -1,0 +1,16 @@
+export { parse, normalizeLineEndings, splitCommentContent } from './parse.js';
+export { recompose } from './recompose.js';
+export { applyBatch } from './apply.js';
+export type { ApplyOptions } from './apply.js';
+export { resolveEditMarks, exportFinalText } from './marks.js';
+export { addComment } from './author.js';
+export type { AddCommentOptions, CommentTarget } from './author.js';
+export { removeComment } from './remove.js';
+export { validate } from './validate.js';
+export { AI_REVIEW_PREAMBLE } from './prompt.js';
+export { generateId, existingIds, ID_ALPHABET } from './id.js';
+export type { GenerateIdOptions } from './id.js';
+export { blockRanges } from './blocks.js';
+export { rawToClean, snapRawToClean, cleanToRaw } from './sourcemap.js';
+export { cpLength, cpSlice, cpToUtf16, utf16ToCp } from './unicode.js';
+export * from './types.js';

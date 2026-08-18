@@ -1,0 +1,38 @@
+{
+  "name": "@galley/codemirror",
+  "version": "0.1.0",
+  "description": "Pure editor models shared by Galley CodeMirror adapters.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roblennon/galley.git",
+    "directory": "packages/codemirror"
+  },
+  "homepage": "https://github.com/roblennon/galley#readme",
+  "bugs": "https://github.com/roblennon/galley/issues",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@galley/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

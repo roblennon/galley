@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in the library or an adapter behaves incorrectly.
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - core (parse / apply / validate)
+        - Obsidian plugin
+        - browser lab
+        - conformance fixtures
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: document
+    attributes:
+      label: Input
+      description: >
+        The smallest annotated document that shows the problem, and the patch
+        batch if one is involved. Paste it as text — a screenshot cannot be
+        turned into a test.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened, and what you expected instead
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package version, plugin version, or commit SHA.

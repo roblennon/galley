@@ -1,0 +1,53 @@
+{
+  "name": "Documents that must survive parse → recompose byte-exactly",
+  "documents": [
+    {
+      "name": "point comment inline",
+      "text": "She left without a word.{>>[c2k] we need a beat here<<} The door stayed open.\n"
+    },
+    {
+      "name": "document comment before any content",
+      "text": "{>>[d4x] overall: tighten the whole piece<<}\n\n# Title\n\nBody text here.\n"
+    },
+    {
+      "name": "document comment after frontmatter",
+      "text": "---\nannotation-spec: 1\n---\n\n{>>[d4x] read this with fresh eyes<<}\n\n# Title\n\nBody.\n"
+    },
+    {
+      "name": "block comment mid-document",
+      "text": "First paragraph stands alone.\n\n{>>[b2m] merge this with the next one?<<}\n\nSecond paragraph continues the thought.\n"
+    },
+    {
+      "name": "two block comments on one block",
+      "text": "A paragraph that drew two notes.\n\n{>>[x2a] first note<<}\n\n{>>[x2b] second note<<}\n"
+    },
+    {
+      "name": "edit marks with identifier carrier",
+      "text": "The quarter was {--largely --}{>>[a3f]<<}difficult, and we {~~recieved~>received~~} strong signals.\n"
+    },
+    {
+      "name": "insertion and substitution",
+      "text": "We {++quickly ++}moved to {~~old~>new~~} offices.\n"
+    },
+    {
+      "name": "edit mark inside a span anchor",
+      "text": "It was {==a {--very --}bold==}{>>[e9k] tone check<<} claim.\n"
+    },
+    {
+      "name": "astral characters before annotations",
+      "text": "The 🦄 pony {==sparkles==}{>>[u7q] too much whimsy<<} at dawn.\n"
+    },
+    {
+      "name": "multiline comment body",
+      "text": "A claim that needs backup.{>>[m3p] this needs a citation\nor at least a hedge<<}\n"
+    },
+    {
+      "name": "comment without identifier",
+      "text": "Plain prose here.{>>anonymous note<<}\n"
+    },
+    {
+      "name": "no trailing newline",
+      "text": "Final line {==ends==}{>>[z8n] abruptly<<} here"
+    }
+  ]
+}
