@@ -29,8 +29,8 @@
     "@galley/core": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "typescript": "^7.0.2",
     "vite": "^8.2.1",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.10"
   }
 }
