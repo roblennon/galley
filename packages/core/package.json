@@ -9,7 +9,6 @@
   },
   "homepage": "https://github.com/roblennon/galley#readme",
   "bugs": "https://github.com/roblennon/galley/issues",
-  "private": true,
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
