@@ -1,4 +1,4 @@
-import { parse } from './parse.js';
+import { parse, normalizeLineEndings } from './parse.js';
 import { recompose } from './recompose.js';
 import { blockRanges, blockAtOrBefore, blockContaining } from './blocks.js';
 import { cpLength, cpSlice, cpToUtf16, utf16ToCp } from './unicode.js';
@@ -86,6 +86,16 @@ function insideAnnotationOf(
   return false;
 }
 
+/** Describe an untrusted value for an error message without invoking its own
+ * toString, which may itself throw (GAL-REV-033). */
+function describe(v: unknown): string {
+  const t = typeof v;
+  if (v === null) return 'null';
+  if (t === 'string') return JSON.stringify(v);
+  if (t === 'number' || t === 'boolean' || t === 'undefined') return String(v);
+  return `[${t}]`;
+}
+
 function findAllCp(clean: string, find: string): number[] {
   const out: number[] = [];
   let idx = clean.indexOf(find);
@@ -129,6 +139,14 @@ export function applyBatch(
   const responseIssues: ResponseIssue[] = [];
   const seenResponses = new Set<string>();
   for (const r of responses) {
+    if (r === null || typeof r !== 'object' || typeof r.comment !== 'string') {
+      responseIssues.push({
+        code: 'unknown-comment',
+        message: `response entry is not a valid response object`,
+        comment: '',
+      });
+      continue;
+    }
     if (!byId.has(r.comment)) {
       responseIssues.push({
         code: 'unknown-comment',
@@ -205,7 +223,25 @@ export function applyBatch(
   const rejected: RejectedPatch[] = [];
   const located: Edit[] = [];
   for (let i = 0; i < patches.length; i++) {
-    const p = patches[i]!;
+    let p = patches[i]!;
+    // A batch is untrusted input. These shapes are all valid JSON and used to
+    // escape as an uncaught TypeError rather than a rejection (GAL-REV-033).
+    if (p === null || typeof p !== 'object') {
+      rejected.push({
+        index: i,
+        code: 'invalid-patch',
+        message: 'patch is not an object',
+      });
+      continue;
+    }
+    if (p.type !== 'span' && p.type !== 'block') {
+      rejected.push({
+        index: i,
+        code: 'invalid-patch',
+        message: `unknown patch type ${describe((p as { type?: unknown }).type)}`,
+      });
+      continue;
+    }
     const attributed = new Set(Array.isArray(p.comments) ? p.comments : []);
     if (typeof p.replace === 'string' && MARK_SYNTAX.test(p.replace)) {
       rejected.push({
@@ -229,6 +265,10 @@ export function applyBatch(
         });
         continue;
       }
+      // The document is normalized to \n (SPEC §7); a find quoted from a CRLF
+      // source therefore could not match, and the closest candidate rendered
+      // identically to the input — a retry loop that can never converge.
+      p = { ...p, find: normalizeLineEndings(p.find), replace: normalizeLineEndings(p.replace) };
       if (cpLength(p.find) > MAX_FIND_CP) {
         rejected.push({
           index: i,
@@ -530,6 +570,7 @@ export function applyBatch(
   // Comments not referenced by any patch in the batch (SPEC §10.2).
   const referenced = new Set<string>();
   for (const p of patches) {
+    if (p === null || typeof p !== 'object') continue;
     if (Array.isArray(p.comments)) for (const id of p.comments) referenced.add(id);
     if (p.type === 'block' && typeof p.comment === 'string') {
       referenced.add(p.comment);
@@ -669,6 +710,7 @@ function applyAsEditMarks(
 
   const referenced = new Set<string>();
   for (const p of ctx.patches) {
+    if (p === null || typeof p !== 'object') continue;
     if (Array.isArray(p.comments)) for (const id of p.comments) referenced.add(id);
     if (p.type === 'block' && typeof p.comment === 'string') referenced.add(p.comment);
   }

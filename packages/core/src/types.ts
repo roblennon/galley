@@ -1,4 +1,8 @@
 /** Scope of a comment, determined by placement (SPEC §6.1). */
+/** The spec version this library implements (SPEC §12 requires implementations
+ * declare it). Independent of the package version. */
+export const SPEC_VERSION = 1;
+
 export type Scope = 'span' | 'point' | 'block' | 'document';
 
 /**
