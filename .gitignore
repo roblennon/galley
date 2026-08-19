@@ -5,3 +5,5 @@ dist/
 test-vault/
 .vercel
 .env*
+packages/core/LICENSE
+packages/core/NOTICE

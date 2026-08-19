@@ -18,19 +18,42 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run && node scripts/fuzz.mjs 500",
+    "test": "pnpm build && vitest run && node scripts/fuzz.mjs 500",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "fuzz": "node scripts/fuzz.mjs 800"
+    "fuzz": "node scripts/fuzz.mjs 800",
+    "prepack": "cp ../../LICENSE ../../NOTICE . && pnpm build"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
+  },
+  "keywords": [
+    "markdown",
+    "criticmarkup",
+    "annotations",
+    "comments",
+    "editing",
+    "llm",
+    "galley",
+    "spec"
+  ],
+  "author": "Rob Lennon",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
