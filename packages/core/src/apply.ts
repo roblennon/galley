@@ -154,6 +154,13 @@ export interface ApplyOptions {
   asEditMarks?: boolean;
 }
 
+/** A batch arrives from a model over JSON and is untrusted. Reading any field
+ * can throw if the object came from somewhere else — a getter, a Proxy — so
+ * callers get a rejection rather than an exception. */
+function isPlainRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object';
+}
+
 export function applyBatch(
   text: string,
   batch: PatchBatch,
@@ -162,8 +169,11 @@ export function applyBatch(
   const parsed = parse(text);
   const clean = parsed.cleanText;
   const blocks = blockRanges(clean);
-  const patches = Array.isArray(batch.patches) ? batch.patches : [];
-  const responses = Array.isArray(batch.responses) ? batch.responses : [];
+  // A null or non-object batch reached property access and threw a TypeError,
+  // while its ELEMENTS were guarded — an inconsistency a caller cannot predict.
+  const safeBatch = isPlainRecord(batch) ? batch : ({} as PatchBatch);
+  const patches = Array.isArray(safeBatch.patches) ? safeBatch.patches : [];
+  const responses = Array.isArray(safeBatch.responses) ? safeBatch.responses : [];
 
   const byId = new Map<string, Comment>();
   for (const c of parsed.comments) {
@@ -255,6 +265,14 @@ export function applyBatch(
   // this batch; rebuilding it per patch made many small rejections quadratic.
   const cleanCp: readonly string[] = [...clean];
   const cleanCpAt = buildCpIndex(clean);
+  // The near-miss scan is bounded per patch, but a batch may hold thousands of
+  // them. One shared budget keeps a hostile batch from costing minutes.
+  let candidateBudget = MAX_CANDIDATE_SCAN_CP * 4;
+  const closestWithin = (find: string): string => {
+    if (candidateBudget <= 0) return '';
+    candidateBudget -= cleanCp.length;
+    return closestCandidate(cleanCp, find);
+  };
 
   // Locate every patch against the original clean text (SPEC §10 step 2).
   const rejected: RejectedPatch[] = [];
@@ -276,6 +294,17 @@ export function applyBatch(
         index: i,
         code: 'invalid-patch',
         message: `unknown patch type ${describe((p as { type?: unknown }).type)}`,
+      });
+      continue;
+    }
+    if (
+      p.comments !== undefined &&
+      (!Array.isArray(p.comments) || p.comments.some((c) => typeof c !== 'string'))
+    ) {
+      rejected.push({
+        index: i,
+        code: 'invalid-patch',
+        message: `comments must be an array of identifier strings (SPEC §8.3)`,
       });
       continue;
     }
@@ -336,7 +365,7 @@ export function applyBatch(
           index: i,
           code: 'no-match',
           message: `find does not match the clean text exactly`,
-          closest: closestCandidate(cleanCp, p.find),
+          closest: closestWithin(p.find),
         });
         continue;
       }
@@ -456,6 +485,8 @@ export function applyBatch(
   const reasonPatches = located.filter((e) => e.attributed.size === 0);
   for (let a = 0; a < attributedPatches.length; a++) {
     for (let b = a + 1; b < attributedPatches.length; b++) {
+      // Sorted by start, so nothing beyond this point can overlap `a`.
+      if (attributedPatches[b]!.s >= attributedPatches[a]!.e) break;
       if (overlapping(attributedPatches[a]!, attributedPatches[b]!)) {
         const msg =
           'Overlaps another comment-attributed patch; neither takes precedence (SPEC §10)';
@@ -478,6 +509,7 @@ export function applyBatch(
   }
   for (let a = 0; a < reasonSurvivors.length; a++) {
     for (let b = a + 1; b < reasonSurvivors.length; b++) {
+      if (reasonSurvivors[b]!.s >= reasonSurvivors[a]!.e) break;
       if (overlapping(reasonSurvivors[a]!, reasonSurvivors[b]!)) {
         const msg =
           'Overlaps another patch; neither takes precedence (SPEC §10)';
