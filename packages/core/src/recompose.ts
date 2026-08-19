@@ -40,6 +40,32 @@ export function recompose(
   const clean = result.cleanText;
   const cleanLen = cpLength(clean);
 
+  // SPEC §6.1: a tool MUST refuse to emit a mark that would parse differently
+  // than intended, rather than write it and lose the difference. addComment
+  // enforces this on the authoring path; recompose is the other way a comment
+  // reaches a document, and it validated nothing (GAL-REV-007).
+  for (const c of result.comments) {
+    if (c.body.includes('<<}')) {
+      throw new Error(
+        `comment ${c.id === null ? '(anonymous)' : `[${c.id}]`} body contains the closing delimiter '<<}' and cannot be represented (SPEC §6.1)`,
+      );
+    }
+    if (c.id !== null && !/^[A-Za-z0-9]{1,8}$/.test(c.id)) {
+      throw new Error(
+        `comment id '${c.id}' is not a valid identifier; it would be emitted as body text and the comment would stop being addressable (SPEC §5.1)`,
+      );
+    }
+    if (
+      c.anchor.start < 0 ||
+      c.anchor.end < c.anchor.start ||
+      c.anchor.end > cleanLen
+    ) {
+      throw new Error(
+        `comment ${c.id === null ? '(anonymous)' : `[${c.id}]`} anchor [${c.anchor.start}, ${c.anchor.end}) is out of range for clean text of length ${cleanLen}`,
+      );
+    }
+  }
+
   // Code point → UTF-16 index table for slicing.
   const cpU16 = new Uint32Array(cleanLen + 1);
   {
