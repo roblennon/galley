@@ -201,6 +201,11 @@ export interface ApplyReport {
   anchorModified: string[];
   /** Identified comments not referenced by any patch in the batch. */
   unaddressed: string[];
+  /** Comments a patch was attributed to whose anchor survived, so they remain
+   * inline. The commonest editing shape — a rewrite *within* the anchored
+   * sentence — lands here rather than in `resolved`, and an adapter needs to
+   * know so it can decide whether the note still applies (SPEC §10.1). */
+  answeredInline: string[];
   responseIssues: ResponseIssue[];
   /** Edit marks whose original text was overwritten by a patch. */
   editMarksDropped: number;

@@ -27,10 +27,20 @@ const MARK_SYNTAX = /\{==|\{>>|\{\+\+|\{--|\{~~|==\}|<<\}|\+\+\}|--\}|~~\}|~>/;
 
 /** Closest candidate for a failed find, by per-code-point similarity
  * (SPEC §8.3 requires reporting one; matching itself is never fuzzy). */
-function closestCandidate(clean: string, find: string): string {
-  const cl = [...clean];
+/** Hard ceiling on `find`. SPEC §8.3 says SHOULD NOT exceed 200 characters;
+ * a patch batch is untrusted input, so this is the point where a generous
+ * multiple of that becomes a rejection rather than a scan that never ends. */
+const MAX_FIND_CP = 4096;
+
+/** Cost ceiling for the closest-candidate scan. Reporting a near-miss is a
+ * diagnostic (SPEC §8.3), never a match, so declining to compute one on a very
+ * large document is a fair trade against a multi-minute stall. */
+const MAX_CANDIDATE_SCAN_CP = 200_000;
+
+function closestCandidate(cl: readonly string[], find: string): string {
+  if (cl.length > MAX_CANDIDATE_SCAN_CP) return '';
   const fl = [...find];
-  if (fl.length === 0 || cl.length <= fl.length) return clean;
+  if (fl.length === 0 || cl.length <= fl.length) return cl.join('');
   let best = 0;
   let bestScore = -1;
   for (let i = 0; i + fl.length <= cl.length; i++) {
@@ -44,6 +54,36 @@ function closestCandidate(clean: string, find: string): string {
     }
   }
   return cl.slice(best, best + fl.length).join('');
+}
+
+/** True when `s` contains a surrogate that is not part of a valid pair. Such a
+ * string cannot occur as code points in the document, so matching it would be
+ * matching text that is not there (GAL-REV-008). */
+function hasUnpairedSurrogate(s: string): boolean {
+  return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s);
+}
+
+/** True when applying `replace` inside an anchor or edit mark would introduce a
+ * block boundary there, which SPEC §6.2 and §6.3 forbid (GAL-REV-009). */
+function introducesBlockBoundary(replace: string): boolean {
+  return /\n[ \t]*\n/.test(replace);
+}
+
+/** True when a span patch's match lands strictly inside an existing comment
+ * anchor or edit mark, where a new block boundary would break SPEC §6.2/§6.3. */
+function insideAnnotationOf(
+  start: number,
+  end: number,
+  comments: readonly Comment[],
+  marks: readonly EditMark[],
+): boolean {
+  for (const c of comments) {
+    if (c.anchor.start < end && start < c.anchor.end) return true;
+  }
+  for (const m of marks) {
+    if (m.range.start < end && start < m.range.end) return true;
+  }
+  return false;
 }
 
 function findAllCp(clean: string, find: string): number[] {
@@ -123,6 +163,32 @@ export function applyBatch(
     }
   }
 
+  // SPEC §5.1 requires identifiers be unique within a document. parse reports a
+  // duplicate as an error, and applying anyway can retire the wrong comment,
+  // since only the first per id is addressable (GAL-REV-018).
+  const duplicateIds = parsed.issues.filter((x) => x.code === 'duplicate-id');
+  if (duplicateIds.length > 0) {
+    return {
+      text,
+      report: {
+        applied: [], rejected: patches.map((_, index) => ({
+          index,
+          code: 'invalid-patch' as const,
+          message: 'document contains duplicate identifiers; resolve them before applying a batch (SPEC §5.1)',
+        })),
+        resolved: [], orphaned: [], anchorModified: [], unaddressed: [],
+        answeredInline: [], responseIssues, editMarksDropped: 0,
+        issues: parsed.issues,
+      },
+    };
+  }
+
+  // A document comment's anchor is the whole file, so treating it as "the block
+  // containing the anchor" would let one patch replace everything, while the
+  // named comment itself survives (document comments are exempt from
+  // destruction). SPEC §8.4 does not contemplate this (GAL-REV-017).
+  const isDocumentScoped = (id: string) => byId.get(id)?.scope === 'document';
+
   const blockOfComment = (c: Comment): Range | null => {
     if (c.scope === 'block' || c.scope === 'document') return { ...c.anchor };
     return (
@@ -130,6 +196,10 @@ export function applyBatch(
       blockAtOrBefore(blocks, c.anchor.start)
     );
   };
+
+  // One code-point view of the clean text, shared by every candidate report in
+  // this batch; rebuilding it per patch made many small rejections quadratic.
+  const cleanCp: readonly string[] = [...clean];
 
   // Locate every patch against the original clean text (SPEC §10 step 2).
   const rejected: RejectedPatch[] = [];
@@ -159,13 +229,29 @@ export function applyBatch(
         });
         continue;
       }
+      if (cpLength(p.find) > MAX_FIND_CP) {
+        rejected.push({
+          index: i,
+          code: 'invalid-patch',
+          message: `find exceeds ${MAX_FIND_CP} code points; use a block patch for whole-paragraph rewrites (SPEC §8.3)`,
+        });
+        continue;
+      }
+      if (hasUnpairedSurrogate(p.find)) {
+        rejected.push({
+          index: i,
+          code: 'invalid-patch',
+          message: `find contains an unpaired surrogate and cannot match document text`,
+        });
+        continue;
+      }
       const matches = findAllCp(clean, p.find);
       if (matches.length === 0) {
         rejected.push({
           index: i,
           code: 'no-match',
           message: `find does not match the clean text exactly`,
-          closest: closestCandidate(clean, p.find),
+          closest: closestCandidate(cleanCp, p.find),
         });
         continue;
       }
@@ -197,9 +283,21 @@ export function applyBatch(
           continue;
         }
       }
+      const endCp = startCp + cpLength(p.find);
+      if (
+        introducesBlockBoundary(p.replace) &&
+        insideAnnotationOf(startCp, endCp, parsed.comments, parsed.editMarks)
+      ) {
+        rejected.push({
+          index: i,
+          code: 'invalid-patch',
+          message: `replace introduces a block boundary inside an anchor or edit mark (SPEC §6.2, §6.3); use a block patch to split a paragraph`,
+        });
+        continue;
+      }
       located.push({
         s: startCp,
-        e: startCp + cpLength(p.find),
+        e: endCp,
         L: cpLength(p.replace),
         replace: p.replace,
         index: i,
@@ -211,6 +309,14 @@ export function applyBatch(
           index: i,
           code: 'invalid-patch',
           message: 'Block patch requires a comment id and a replace string',
+        });
+        continue;
+      }
+      if (isDocumentScoped(p.comment)) {
+        rejected.push({
+          index: i,
+          code: 'invalid-patch',
+          message: `Block patch names document-scoped comment [${p.comment}]; its anchor is the whole file, so there is no block to replace (SPEC §8.4)`,
         });
         continue;
       }
@@ -430,6 +536,12 @@ export function applyBatch(
     }
   }
   const unaddressed = [...byId.keys()].filter((id) => !referenced.has(id));
+  // Referenced, and still in the document: the patch edited within the anchor
+  // rather than destroying it, so the comment never resolved (GAL-REV-012).
+  const survivingIds = new Set(
+    newComments.map((c) => c.id).filter((id): id is string => id !== null),
+  );
+  const answeredInline = [...referenced].filter((id) => survivingIds.has(id));
 
   const report: ApplyReport = {
     applied: kept
@@ -444,6 +556,7 @@ export function applyBatch(
     orphaned,
     anchorModified,
     unaddressed,
+    answeredInline,
     responseIssues,
     editMarksDropped,
     issues: parsed.issues,
@@ -559,6 +672,11 @@ function applyAsEditMarks(
     if (Array.isArray(p.comments)) for (const id of p.comments) referenced.add(id);
     if (p.type === 'block' && typeof p.comment === 'string') referenced.add(p.comment);
   }
+  const survivingIds = new Set(
+    newComments.map((c) => c.id).filter((id): id is string => id !== null),
+  );
+  const answeredInline = [...referenced].filter((id) => survivingIds.has(id));
+
   const report: ApplyReport = {
     applied: accepted
       .sort((a, b) => a.index - b.index)
@@ -572,6 +690,7 @@ function applyAsEditMarks(
     orphaned,
     anchorModified,
     unaddressed: [...ctx.byId.keys()].filter((id) => !referenced.has(id)),
+    answeredInline,
     responseIssues: ctx.responseIssues,
     editMarksDropped: 0,
     issues: parsed.issues,
