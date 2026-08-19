@@ -113,6 +113,11 @@ export interface Comment {
 export interface ParseResult {
   /** The document with all annotation syntax removed (SPEC §7). */
   cleanText: string;
+  /** True when the source began with a UTF-8 byte order mark. It is stripped
+   * before parsing — left in place it shifts every offset by one, hides
+   * frontmatter behind it, and turns a document comment into a point comment —
+   * and restored by `recompose` so the round trip stays byte-exact. */
+  bom: boolean;
   /** Raw YAML frontmatter including delimiters and trailing blank lines, or
    * null if absent. Not part of clean text. */
   frontmatter: string | null;

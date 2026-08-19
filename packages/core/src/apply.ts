@@ -655,6 +655,7 @@ export function applyBatch(
   const { text: outText } = recompose({
     cleanText: newClean,
     frontmatter: parsed.frontmatter,
+    bom: parsed.bom,
     comments: newComments,
     editMarks: newMarks,
   });
@@ -828,6 +829,7 @@ function applyAsEditMarks(
   const { text: outText } = recompose({
     cleanText: clean,
     frontmatter: parsed.frontmatter,
+    bom: parsed.bom,
     comments: newComments,
     editMarks: newMarks,
   });

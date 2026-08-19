@@ -103,6 +103,7 @@ export function resolveEditMarks(
   const { text: out } = recompose({
     cleanText: newClean,
     frontmatter: parsed.frontmatter,
+    bom: parsed.bom,
     comments,
     editMarks: marks.filter((m): m is NonNullable<typeof m> => m !== null),
   });

@@ -35,7 +35,8 @@ export function recompose(
   result: Pick<
     ParseResult,
     'cleanText' | 'frontmatter' | 'comments' | 'editMarks'
-  >,
+  > &
+    Partial<Pick<ParseResult, 'bom'>>,
 ): { text: string } {
   const clean = result.cleanText;
   const cleanLen = cpLength(clean);
@@ -268,5 +269,7 @@ export function recompose(
     cursor = e.pos;
   }
   out += sliceCp(cursor, cleanLen);
-  return { text: out };
+  // Restored last, outside every offset calculation, so it never participates
+  // in the arithmetic that made it a bug in the first place.
+  return { text: result.bom ? '\uFEFF' + out : out };
 }

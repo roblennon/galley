@@ -89,7 +89,12 @@ function trailingBlankSeparator(
 }
 
 export function parse(text: string): ParseResult {
-  const full = normalizeLineEndings(text);
+  const normalized = normalizeLineEndings(text);
+  // A BOM is an invisible prefix some editors write. Treated as content it
+  // shifts every offset, pushes frontmatter off position zero, and demotes a
+  // leading document comment to a point comment.
+  const bom = normalized.charCodeAt(0) === 0xfeff;
+  const full = bom ? normalized.slice(1) : normalized;
 
   // Frontmatter: delimiters plus immediately following blank lines (SPEC §7).
   let frontmatter: string | null = null;
@@ -499,6 +504,7 @@ export function parse(text: string): ParseResult {
 
   return {
     cleanText: clean,
+    bom,
     frontmatter,
     comments: outComments,
     editMarks,

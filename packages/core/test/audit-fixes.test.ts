@@ -400,3 +400,37 @@ describe('guards the mutation audit found untested', () => {
     expect(inside.report.answeredInline).toEqual(['b1']);
   });
 });
+
+describe('byte order marks', () => {
+  const BOM = '﻿';
+
+  it('does not let a BOM shift offsets or hide frontmatter', () => {
+    const doc = `${BOM}---\ntitle: x\n---\n\nBody {==here==}{>>[a1b] why<<}.\n`;
+    const parsed = parse(doc);
+    expect(parsed.bom).toBe(true);
+    expect(parsed.frontmatter).not.toBeNull();
+    expect(parsed.cleanText.startsWith('Body')).toBe(true);
+    // Byte-exact including the mark itself.
+    expect(recompose(parsed).text).toBe(doc);
+  });
+
+  it('keeps a leading document comment at document scope', () => {
+    expect(parse(`${BOM}{>>[d1d] doc note<<}\n\nBody.\n`).comments[0]!.scope).toBe(
+      'document',
+    );
+  });
+
+  it('preserves the mark through applyBatch', () => {
+    const doc = `${BOM}Body {==here==}{>>[a1b] why<<}.\n`;
+    const { text } = applyBatch(doc, {
+      spec: 1,
+      responses: [{ comment: 'a1b', status: 'patched' }],
+      patches: [{ type: 'span', find: 'here', replace: 'there', comments: ['a1b'] }],
+    });
+    expect(text.charCodeAt(0)).toBe(0xfeff);
+  });
+
+  it('does not invent a mark for documents that never had one', () => {
+    expect(recompose(parse('Plain.\n')).text).toBe('Plain.\n');
+  });
+});

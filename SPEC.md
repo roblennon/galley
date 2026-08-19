@@ -208,8 +208,9 @@ rather than emit a mark that parses differently than intended.
 ### 6.2 Anchoring rules
 
 - An anchor MUST NOT cross a block boundary.
-- An anchor MUST NOT partially overlap a Markdown emphasis, link, or code span. It
-  MUST either contain the construct entirely or lie entirely outside it.
+- An anchor SHOULD NOT partially overlap a Markdown emphasis, link, or code
+  span; it should either contain the construct entirely or lie entirely outside
+  it. This is authoring guidance, not a conformance requirement — see below.
 - Anchors MUST NOT overlap each other.
 - Anchors MUST NOT nest.
 - A comment mark forming a span comment MUST immediately follow its highlight's
@@ -222,6 +223,18 @@ The overlap and nesting restrictions exist so that every conforming document can
 be rendered by decomposing text into non-overlapping segments. Implementations
 encountering overlapping or nested anchors MUST report an error and MUST NOT guess
 at the intended structure.
+
+The emphasis rule is deliberately a SHOULD NOT rather than a MUST NOT. Enforcing
+it requires recognizing Markdown inline structure, which would put a full inline
+parser — the most intricate part of CommonMark — inside every conforming
+implementation in every language, for a rule whose violation costs nothing in
+data terms: an anchor that starts inside `*emphasis*` and ends outside it still
+produces correct clean text, still round-trips byte-exactly, and still applies
+patches correctly. What suffers is only how a highlight looks when rendered.
+Weighed against the same reasoning as §7.1's block definition, the dependency is
+not worth the tidiness. Editors SHOULD snap an anchor outward to whole
+constructs where they can, and implementations MAY report a partial overlap as a
+warning; neither is required to conform.
 
 ### 6.3 Edit marks
 
@@ -288,6 +301,13 @@ All patches are expressed against clean text. A patch batch therefore applies
 identically to an annotated document and to a copy with annotations stripped.
 
 ---
+
+A UTF-8 byte order mark, when present at the start of a document, is not part
+of clean text and does not participate in offsets. Implementations MUST strip it
+before parsing and MUST restore it when writing the document back, so that a
+file carrying one round-trips unchanged. Treating it as content shifts every
+offset by one, hides frontmatter behind it, and reclassifies a leading document
+comment as a point comment.
 
 ## 7.1 Block boundaries
 
