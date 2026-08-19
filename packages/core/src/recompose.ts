@@ -90,6 +90,9 @@ export function recompose(
     cp >= 0 && cp < cleanLen ? sliceCp(cp, cp + 1) : '';
 
   const events: Emission[] = [];
+  // Positions where a block comment has already been emitted with conventional
+  // spacing, so later ones there do not each re-add the separator.
+  const fallbackPositions = new Set<number>();
   let ord = 0;
 
   // Carrier comments are serialized by their edit mark.
@@ -165,9 +168,19 @@ export function recompose(
       } else {
         pos =
           charAtCp(c.anchor.end) === '\n' ? c.anchor.end + 1 : c.anchor.end;
+        // `before` is computed against the ORIGINAL text, so a second block
+        // comment appended at the same position recomputes the same separator
+        // and stacks another blank line. The first one already supplied it.
         before =
-          pos === 0 ? '' : charAtCp(pos - 1) === '\n' ? '\n' : '\n\n';
+          pos === 0
+            ? ''
+            : fallbackPositions.has(pos)
+              ? '\n'
+              : charAtCp(pos - 1) === '\n'
+                ? '\n'
+                : '\n\n';
         after = '\n';
+        fallbackPositions.add(pos);
       }
       events.push({
         pos,

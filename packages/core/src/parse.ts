@@ -378,6 +378,12 @@ export function parse(text: string): ParseResult {
             srcExtent: [tok.start, tok.end],
           });
           noteAnchored(comments[comments.length - 1]!.aU?.[1] ?? null);
+          // A block comment records its position against clean text as it
+          // stands right now. A later block comment must not truncate below
+          // that point, or this one's position ends up past the end of the
+          // final clean text — which throws on lookup, and where it happens to
+          // stay in range, emits comments out of order and mid-word.
+          noteAnchored(clean.length);
           pos = hadNL ? lineEnd + 1 : lineEnd;
         }
         prevAdj = null;

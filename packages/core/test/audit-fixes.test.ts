@@ -434,3 +434,39 @@ describe('byte order marks', () => {
     expect(recompose(parse('Plain.\n')).text).toBe('Plain.\n');
   });
 });
+
+/** Stacked block comments after a run of blank lines. parse recorded each
+ * comment's position against clean text as it stood at that moment, so a later
+ * one truncating further left an earlier position past the end. Pre-existing on
+ * main, and on the publish path. */
+describe('stacked block comments', () => {
+  it('does not throw on a paragraph followed by two block comments', () => {
+    expect(() =>
+      parse('Alpha.\n\n\n{>>[a1] one<<}\n{>>[b2] two<<}\n'),
+    ).not.toThrow();
+  });
+
+  it('round-trips them without reordering or injecting mid-word', () => {
+    const doc = ' extra\n\n\n{>>[b1] note<<}\n{>>[b2] note<<}\nShort.\n';
+    // Previously emitted the second comment first and spliced the other into
+    // the middle of "Short."
+    expect(recompose(parse(doc)).text).toBe(doc);
+  });
+
+  it('appends only one separator when several block comments land at the end', () => {
+    const doc = 'kilo rewritten.';
+    const layer = parse(doc);
+    for (const id of ['c1', 'c2']) {
+      layer.comments.push({
+        id,
+        scope: 'block',
+        body: 'note',
+        anchor: { start: 0, end: doc.length },
+        flags: [],
+      } as Comment);
+    }
+    // SPEC §7 allows exactly one trailing newline here; each comment used to
+    // re-add the separator computed against the original text.
+    expect(parse(recompose(layer).text).cleanText).toBe('kilo rewritten.\n');
+  });
+});

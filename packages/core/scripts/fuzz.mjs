@@ -230,18 +230,8 @@ function soleInsertion(actual, expected) {
  * src/, so a hit is counted and printed under a loud banner instead of failing
  * the run. Delete an entry the moment its defect is fixed: the check becomes
  * fatal again, which is the whole point of keeping the list short and named. */
-const KNOWN_DEFECTS = [
-  {
-    id: "accept-all in tracked mode does not land where the destructive path lands: blank lines differ around a comment whose block was rewritten, so the two routes to the same edit produce different whitespace",
-    repro: "see FUZZ_SHOW_DEFECT=1 context; class D, first seen at seed 56. Content is identical; only separator whitespace differs.",
-    // Scoped to class D and to a pure blank-line insertion. The previous form
-    // also matched `ins.includes(expected)`, which swallowed whole-document
-    // duplication — a far worse defect wearing the same signature.
-    classes: ['D'],
-    matches: (actual, expected) => soleInsertion(actual, expected) === '\n\n',
-  },
+const KNOWN_DEFECTS = [];
 
-];
 
 
 

@@ -84,10 +84,14 @@ export function resolveEditMarks(
     if (c.scope === 'block') {
       const pos = c.placement?.pos ?? c.anchor.end;
       const t2 = transformRange({ start: pos, end: pos }, edits);
-      const p = 'destroyed' in t2 ? t2.destroyed.s : t2.range.start;
-      const block = blockAtOrBefore(newBlocks, p) ?? { start: 0, end: 0 };
+      const moved = 'destroyed' in t2 ? t2.destroyed.s : t2.range.start;
+      const block = blockAtOrBefore(newBlocks, moved) ?? { start: 0, end: 0 };
+      // `placement` records whitespace coherent with one specific clean-text
+      // state; after marks resolve, that state is gone. The destroyed branch
+      // already drops it, and resolveEditMarks rewrites the whole document
+      // anyway, so byte-exactness of untouched documents is not at stake.
       const out: Comment = { ...rest, anchor: { ...block } };
-      if (c.placement) out.placement = { ...c.placement, pos: p };
+      delete out.placement;
       comments.push(out);
       continue;
     }
