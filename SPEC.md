@@ -67,6 +67,9 @@ described in RFC 2119.
 - **Comment** — an identifier, an anchor or placement, and a body.
 - **Scope** — whether a comment addresses a point, a span, a block, or the
   document.
+- **Block** — a maximal run of consecutive lines in clean text that are not
+  blank, where a blank line is one containing only spaces and tabs. Block
+  boundaries are computed over clean text by this rule alone; see §7.1.
 - **Edit mark** — an inline insertion, deletion, or substitution (§6.3).
 - **Patch** — a single proposed text change, expressed as data rather than markup.
 - **Patch batch** — a set of patches plus a response for every comment (§8).
@@ -283,6 +286,43 @@ anchors are ranges into it.
 
 All patches are expressed against clean text. A patch batch therefore applies
 identically to an annotated document and to a copy with annotations stripped.
+
+---
+
+## 7.1 Block boundaries
+
+A **block** is a maximal run of consecutive non-blank lines in clean text. A
+line is blank when it contains only spaces and tabs. A block's range excludes
+the line terminator that ends it.
+
+Implementations MUST compute block boundaries by this rule alone. They MUST NOT
+parse Markdown structure to determine them. Two conforming implementations
+therefore agree on block boundaries for every document, in any language, with no
+Markdown parser and no shared dependency.
+
+This is a deliberate simplification, and it has consequences worth stating
+plainly rather than discovering:
+
+- A heading followed immediately by a paragraph, with no blank line between
+  them, is **one** block. An anchor may span both.
+- A list whose items are not separated by blank lines is **one** block. A list
+  with blank lines between items is several.
+- A fenced code block containing a blank line is **two or more** blocks, because
+  the fence is not interpreted.
+- Two paragraphs separated only by a line of spaces are still two blocks, since
+  such a line is blank by this definition.
+
+The alternative — defining blocks by Markdown structure — would be more faithful
+to how a reader sees a document, but it would require every implementation to
+carry a CommonMark parser, and would make block boundaries depend on which
+Markdown flavor an implementation chose. For a format whose purpose is that a
+plain-text document is self-describing and portable, that cost is not worth
+paying. This rule may be revisited in a later spec version; it will not change
+within version 1.
+
+Because a heading and the paragraph beneath it may be one block, tools that
+create anchors SHOULD avoid spanning a line that begins with `#` when a
+narrower anchor expresses the same intent.
 
 ---
 
