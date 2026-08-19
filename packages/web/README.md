@@ -13,8 +13,20 @@ pnpm --filter @galley/web test
 ```
 
 The dependency-inclusive build command is intentional: workspace dependencies
-must be built before Vite creates the static bundle. Netlify uses the same command
-from `netlify.toml` and publishes `packages/web/dist`.
+must be built before Vite creates the static bundle. Hosting uses the same command
+from `vercel.json` and publishes `packages/web/dist`.
+
+## Response headers
+
+`vercel.json` sets a Content-Security-Policy that keeps this promise mechanical
+rather than merely stated: `default-src 'self'` means the page cannot originate a
+request to any other host, so a document opened here has nowhere to go. `style-src`
+allows `'unsafe-inline'` because CodeMirror injects `<style>` elements at runtime;
+scripts get no such exemption. `frame-ancestors 'none'` prevents the lab being
+embedded by a site that could overlay it.
+
+Changing these headers changes a security claim this project makes in SECURITY.md.
+Treat them as behavior under test, not configuration.
 
 ## File behavior
 
