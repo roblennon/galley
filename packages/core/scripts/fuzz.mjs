@@ -5,12 +5,23 @@
  *     sourceMap tiles clean text with byte-identical segments; ids unique;
  *     removeComment removes exactly one comment and preserves clean text.
  *  B. applyBatch: id conservation (resolved ∪ surviving == original, disjoint);
- *     output round-trips; output has no error issues.
+ *     output round-trips; output has no error issues; and a SEMANTIC ORACLE —
+ *     replaying report.applied over the original clean text independently
+ *     reproduces the output's clean text, so a patch that silently did nothing
+ *     (or wrote the wrong bytes) is caught, not just a structurally sound doc.
  *  C. ANY input string: parse never throws and recompose(parse(x)) === normalized x.
+ *  D. tracked changes: applyBatch({asEditMarks}) then resolveEditMarks —
+ *     reject-all restores the original clean text, accept-all matches the
+ *     destructive result, output has no error issues and round-trips.
+ *
+ * A mismatch that matches a KNOWN_DEFECTS entry (or CLIPS_OWN_ANCHOR) is
+ * counted and printed under a banner instead of failing the run: those defects
+ * live in src/, which this script does not own. Delete the entry when the
+ * defect is fixed and the check goes back to being fatal.
  */
 import {
   addComment, applyBatch, cpLength, cpSlice, normalizeLineEndings,
-  parse, recompose, removeComment,
+  parse, recompose, removeComment, resolveEditMarks,
 } from '../dist/index.js';
 
 const mulberry32 = (a) => () => {
@@ -114,7 +125,7 @@ function randomBatch(p) {
       const flen = 2 + ri(Math.min(25, cleanLen - start - 2));
       const find = cpSlice(clean, start, start + flen);
       if (find.includes('\n\n') || find.trim() === '') continue;
-      const replace = ri(5) === 0 ? '' : pick(WORDS) + ' ' + pick(WORDS);
+      const replace = randomReplace();
       const patch = { type: 'span', find, replace };
       if (ids.length && ri(2) === 0) patch.comments = [pick(ids)];
       else patch.reason = 'fuzz';
@@ -122,6 +133,55 @@ function randomBatch(p) {
     }
   }
   return { spec: 1, responses, patches };
+}
+
+/** Replacement text for a generated patch. Deliberately reaches the blank-line
+ * guard (SPEC §6.2/§6.3) and the astral/surrogate paths — those are rejection
+ * paths, and a fuzzer that never generates them never exercises them. */
+function randomReplace() {
+  const r = ri(12);
+  if (r === 0) return '';
+  if (r === 1) return pick(WORDS) + '\n\n' + pick(WORDS);
+  if (r === 2) return '🧵 ' + pick(WORDS) + ' 𝔤𝔞𝔩';
+  if (r === 3) return pick(WORDS) + '\n' + pick(WORDS);
+  // Leading and trailing newlines. Their absence made every replacement start
+  // with a word, so a bug that dropped a leading newline from the written text
+  // was unreachable by this generator — not tolerated by a matcher, simply
+  // never exercised. Boundary characters at the edges of a replacement are
+  // exactly where off-by-one writes hide.
+  if (r === 4) return '\n' + pick(WORDS);
+  if (r === 5) return pick(WORDS) + '\n';
+  return pick(WORDS) + ' ' + pick(WORDS);
+}
+
+/** Independent re-derivation of the patched clean text: replay the report's
+ * applied ranges (code points over the ORIGINAL clean text) right-to-left.
+ * Only meaningful for the destructive path, where clean text is what changes. */
+/** SPEC §7: attaching a block or document comment after the final block of a
+ * document with no trailing newline requires a line terminator to exist, so
+ * clean text may gain exactly one. Narrow by construction — it only forgives a
+ * single '\n' at the very end, and only when the baseline lacked one. */
+function allowSpecifiedFinalNewline(expected, actual) {
+  return !expected.endsWith('\n') && expected !== '' && actual === expected + '\n'
+    ? actual
+    : expected;
+}
+
+function expectedCleanText(clean, batch, report, actual) {
+  const edits = report.applied
+    .map((a) => ({ ...a, replace: normalizeLineEndings(batch.patches[a.index].replace) }))
+    .sort((x, y) => y.range.start - x.range.start);
+  let out = [...clean];
+  for (const e of edits) {
+    out = [...out.slice(0, e.range.start), ...e.replace, ...out.slice(e.range.end)];
+  }
+  let expected = out.join('');
+  // SPEC §7: a block or document comment occupies its own line, so attaching one
+  // after the final block of a document with no trailing newline requires one to
+  // exist. Specified behaviour, not a defect — and deliberately narrow: it
+  // applies only when the text was already missing a final newline and the
+  // difference is exactly that one character at the very end.
+  return allowSpecifiedFinalNewline(expected, actual);
 }
 
 function checkApply(doc, label) {
@@ -133,6 +193,12 @@ function checkApply(doc, label) {
   const afterErrs = after.issues.filter((i) => i.severity === 'error');
   if (afterErrs.length) throw new Error(`${label}: apply produced errors ${JSON.stringify(afterErrs)}\ndoc=${JSON.stringify(doc)}\nbatch=${JSON.stringify(batch)}\nout=${JSON.stringify(out)}`);
   assertEq(recompose(after).text, out, `${label}: apply output round trip`, JSON.stringify({ doc, batch }));
+  // Semantic oracle: the report's own applied ranges, replayed independently,
+  // must reproduce the output's clean text. Structural invariants alone are
+  // satisfied by a run that rejected every patch and changed nothing.
+  trackedEq(after.cleanText, expectedCleanText(before.cleanText, batch, report, after.cleanText),
+    `${label}: patched clean text does not match the report`,
+    JSON.stringify({ doc, batch, out, applied: report.applied, rejected: report.rejected }), 'B');
   const afterIds = new Set(after.comments.filter((c) => c.id !== null).map((c) => c.id));
   const resolvedIds = new Set(report.resolved.map((r) => r.id));
   for (const id of beforeIds) {
@@ -147,6 +213,99 @@ function checkApply(doc, label) {
   }
 }
 
+/** The text `actual` has that `expected` does not, when the difference is one
+ * contiguous insertion; null when the two differ in any other way. */
+function soleInsertion(actual, expected) {
+  if (actual.length <= expected.length) return null;
+  let p = 0;
+  while (p < expected.length && actual[p] === expected[p]) p++;
+  let s = 0;
+  while (s < expected.length - p && actual[actual.length - 1 - s] === expected[expected.length - 1 - s]) s++;
+  if (p + s !== expected.length) return null;
+  return actual.slice(p, actual.length - s);
+}
+
+/** Known, OPEN defects in src/ that classes B and D reproduce. This script does
+ * not own
+ * src/, so a hit is counted and printed under a loud banner instead of failing
+ * the run. Delete an entry the moment its defect is fixed: the check becomes
+ * fatal again, which is the whole point of keeping the list short and named. */
+const KNOWN_DEFECTS = [];
+
+
+
+
+/** True when an applied tracked patch partially overlaps a span anchor —
+ * overlapping it without either range containing the other. */
+function clipsOwnAnchor(before, applied) {
+  return applied.some((a) =>
+    before.comments.some((c) =>
+      c.scope === 'span' &&
+      c.anchor.start < c.anchor.end &&
+      a.range.start < c.anchor.end && c.anchor.start < a.range.end &&
+      !(a.range.start <= c.anchor.start && c.anchor.end <= a.range.end) &&
+      !(c.anchor.start <= a.range.start && a.range.end <= c.anchor.end)));
+}
+
+/** Compare, tagging a mismatch that is a known open defect so the caller can
+ * count it rather than fail on it. */
+function trackedEq(actual, expected, msg, ctx, cls) {
+  if (actual === expected) return;
+  const e = new Error(`${msg}\n--- actual ---\n${JSON.stringify(actual)}\n--- expected ---\n${JSON.stringify(expected)}\n--- ctx ---\n${ctx}`);
+  const known = KNOWN_DEFECTS.find(
+    (d) => (!d.classes || (cls && d.classes.includes(cls))) && d.matches(actual, expected),
+  );
+  if (known) e.knownDefect = known.id + (known.repro ? `\n    repro: ${known.repro}` : '');
+  throw e;
+}
+
+/** Class D: the tracked-changes round trip. Reject-all must restore the prose
+ * exactly; accept-all must land where the destructive path lands. The tracked
+ * path rejects a few patches the destructive path accepts (nesting a mark,
+ * clipping an anchor), so accept-all is only compared when both paths kept the
+ * same set of patches — otherwise a legitimate difference would read as a bug. */
+function checkTracked(doc, label) {
+  const before = parse(doc);
+  const batch = randomBatch(before);
+  const ctx = () => JSON.stringify({ doc, batch });
+  const tracked = applyBatch(doc, batch, { asEditMarks: true });
+  if (clipsOwnAnchor(before, tracked.report.applied)) {
+    // The format cannot represent a tracked mark straddling one end of a span
+    // anchor. applyBatch must reject such a patch, so reaching here is a
+    // regression and is FATAL — it was briefly tolerated, which meant the guard
+    // protecting against it could be removed with the suite still green.
+    throw new Error(`${label}: a tracked mark straddles a span anchor (must have been rejected)\n${ctx()}`);
+  }
+  const tp = parse(tracked.text);
+  const trackedErrs = tp.issues.filter((i) => i.severity === 'error');
+  if (trackedErrs.length) throw new Error(`${label}: tracked output has errors ${JSON.stringify(trackedErrs)}\n${ctx()}`);
+  assertEq(recompose(tp).text, tracked.text, `${label}: tracked output round trip`, ctx());
+  // Marks carry the proposal; the prose itself is untouched.
+  trackedEq(tp.cleanText, allowSpecifiedFinalNewline(before.cleanText, tp.cleanText), `${label}: tracked run changed the clean text`, ctx(), 'D');
+
+  const rejectedAll = resolveEditMarks(tracked.text, { action: 'reject' });
+  const rp = parse(rejectedAll.text);
+  trackedEq(rp.cleanText, allowSpecifiedFinalNewline(before.cleanText, rp.cleanText), `${label}: reject-all did not restore the prose`, ctx(), 'D');
+  assertEq(recompose(rp).text, rejectedAll.text, `${label}: reject-all round trip`, ctx());
+  if (rp.issues.some((i) => i.severity === 'error')) {
+    throw new Error(`${label}: reject-all produced errors ${JSON.stringify(rp.issues)}\n${ctx()}`);
+  }
+
+  const acceptedAll = resolveEditMarks(tracked.text, { action: 'accept' });
+  const ap = parse(acceptedAll.text);
+  assertEq(recompose(ap).text, acceptedAll.text, `${label}: accept-all round trip`, ctx());
+  if (ap.issues.some((i) => i.severity === 'error')) {
+    throw new Error(`${label}: accept-all produced errors ${JSON.stringify(ap.issues)}\n${ctx()}`);
+  }
+  const destructive = applyBatch(doc, batch);
+  const sameSet = JSON.stringify(tracked.report.applied.map((a) => a.index))
+    === JSON.stringify(destructive.report.applied.map((a) => a.index));
+  if (sameSet) {
+    trackedEq(ap.cleanText, parse(destructive.text).cleanText,
+      `${label}: accept-all differs from the destructive result`, ctx(), 'D');
+  }
+}
+
 function randomJunk() {
   const bits = ['{==', '==}', '{>>', '<<}', '{--', '--}', '{++', '++}', '{~~', '~~}', '~>',
     '[a3f] ', 'plain text ', '\n', '\n\n', '---\n', 'word ', '{', '}', '==', '🦄 ', ' '];
@@ -157,7 +316,17 @@ function randomJunk() {
 }
 
 let failures = 0;
+/** Hits on a defect that is known, open, and NOT this script's to fix. They are
+ * printed loudly and counted, but do not fail the run — deleting the tag in
+ * checkTracked once the defect is fixed turns them back into hard failures. */
+const knownDefects = new Map();
 const report = (e, seed, cls) => {
+  if (e.knownDefect) {
+    const hits = knownDefects.get(e.knownDefect) ?? { count: 0, first: `${cls}(seed ${seed})`, ctx: e.message };
+    hits.count++;
+    knownDefects.set(e.knownDefect, hits);
+    return;
+  }
   failures++;
   console.error(`\n=== FAILURE class ${cls} seed ${seed} ===\n${e.message.slice(0, 1200)}`);
 };
@@ -189,7 +358,26 @@ for (let seed = 1; seed <= N; seed++) {
     const p = parse(junk);
     assertEq(recompose(p).text, norm, `C(seed ${seed}): junk round trip`, JSON.stringify(junk));
   } catch (e) { report(e, seed, 'C'); }
+  try {
+    const doc = randomAnnotate(randomCleanDoc(), 1 + ri(5));
+    checkTracked(doc, `D(seed ${seed})`);
+  } catch (e) { report(e, seed, 'D'); }
   if (failures > 12) { console.error('aborting: too many failures'); break; }
 }
-console.log(failures === 0 ? `\nALL INVARIANTS HELD over ${N} seeds × 3 classes` : `\n${failures} failures`);
+for (const [defect, hits] of knownDefects) {
+  console.error(`\n!!! KNOWN OPEN DEFECT hit ${hits.count}× (first: ${hits.first}): ${defect}`);
+  if (process.env.FUZZ_SHOW_DEFECT) console.error('    context: ' + (hits.ctx ?? '(none)'));
+}
+const tolerated = [...knownDefects.values()].reduce((n, h) => n + h.count, 0);
+if (failures > 0) {
+  console.log(`\n${failures} failures`);
+} else if (tolerated > 0) {
+  // Not "all invariants held": some were violated and excused by name. Saying
+  // otherwise is how a gate starts lying about what it checked.
+  console.log(
+    `\nNO NEW FAILURES over ${N} seeds × 4 classes — ${tolerated} tolerated hit(s) against ${knownDefects.size} known open defect(s), listed above`,
+  );
+} else {
+  console.log(`\nALL INVARIANTS HELD over ${N} seeds × 4 classes`);
+}
 process.exit(failures === 0 ? 0 : 1);

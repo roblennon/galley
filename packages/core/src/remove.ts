@@ -17,6 +17,7 @@ export function removeComment(
   const { text: out } = recompose({
     cleanText: parsed.cleanText,
     frontmatter: parsed.frontmatter,
+    bom: parsed.bom,
     comments: parsed.comments.filter((c) => c.id !== options.id),
     editMarks: parsed.editMarks.map((m) =>
       m.commentId === options.id ? { ...m, commentId: null } : m,

@@ -1,0 +1,20 @@
+{
+  "name": "An identifier-like prefix inside an edit mark is ordinary content, reported as a warning (SPEC §11)",
+  "input": "{--[ab] text--}\n",
+  "cleanText": "[ab] text\n",
+  "frontmatter": null,
+  "comments": [],
+  "editMarks": [
+    {
+      "kind": "deletion",
+      "original": "[ab] text",
+      "proposed": ""
+    }
+  ],
+  "expectedIssues": [
+    {
+      "code": "identifier-in-content",
+      "severity": "warning"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Identifiers MUST be unique within a document (SPEC §5.1)",
+  "input": "a{>>[x1] one<<} b{>>[x1] two<<}\n",
+  "cleanText": "a b\n",
+  "frontmatter": null,
+  "comments": [
+    {
+      "id": "x1",
+      "scope": "point",
+      "body": "one",
+      "anchorText": ""
+    },
+    {
+      "id": "x1",
+      "scope": "point",
+      "body": "two",
+      "anchorText": ""
+    }
+  ],
+  "editMarks": [],
+  "expectedIssues": [
+    {
+      "code": "duplicate-id",
+      "severity": "error"
+    }
+  ]
+}

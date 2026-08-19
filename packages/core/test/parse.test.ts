@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../src/index.js';
-import { cpIndexOf, cpSlice, readFixture } from './helpers.js';
+import {
+  cpIndexOf,
+  cpSlice,
+  expectIssues,
+  readFixtureDir,
+} from './helpers.js';
 
 interface ParseFixture {
   name: string;
@@ -8,48 +13,56 @@ interface ParseFixture {
   cleanText: string;
   frontmatter: string | null;
   comments: {
-    id: string;
+    id: string | null;
     scope: string;
     body: string;
     anchorText: string;
   }[];
   editMarks: { kind: string; original: string; proposed: string }[];
+  /** Absent means the document must parse clean. */
+  expectedIssues?: { code: string; severity: string }[];
 }
 
-describe('parse: conformance fixture', () => {
-  const fx = readFixture<ParseFixture>('parse/spec-13.json');
+/** Every fixture in conformance/parse/, positive and negative alike. */
+describe('parse: conformance fixtures', () => {
+  for (const { file, fixture: fx } of readFixtureDir<ParseFixture>('parse')) {
+    describe(`${file} — ${fx.name}`, () => {
+      it('decomposes into the expected clean text and frontmatter', () => {
+        const result = parse(fx.input);
+        expect(result.cleanText).toBe(fx.cleanText);
+        expect(result.frontmatter).toBe(fx.frontmatter);
+      });
 
-  it('decomposes into the expected clean text and frontmatter', () => {
-    const result = parse(fx.input);
-    expect(result.cleanText).toBe(fx.cleanText);
-    expect(result.frontmatter).toBe(fx.frontmatter);
-    expect(result.issues).toEqual([]);
-  });
+      it('reports exactly the expected issues', () => {
+        expectIssues(parse(fx.input).issues, fx.expectedIssues);
+      });
 
-  it('produces the expected comments with correct anchors', () => {
-    const result = parse(fx.input);
-    expect(result.comments).toHaveLength(fx.comments.length);
-    fx.comments.forEach((expected, i) => {
-      const actual = result.comments[i]!;
-      expect(actual.id).toBe(expected.id);
-      expect(actual.scope).toBe(expected.scope);
-      expect(actual.body).toBe(expected.body);
-      expect(
-        cpSlice(result.cleanText, actual.anchor.start, actual.anchor.end),
-      ).toBe(expected.anchorText);
+      it('produces the expected comments with correct anchors', () => {
+        const result = parse(fx.input);
+        expect(result.comments).toHaveLength(fx.comments.length);
+        fx.comments.forEach((expected, i) => {
+          const actual = result.comments[i]!;
+          expect(actual.id).toBe(expected.id);
+          expect(actual.scope).toBe(expected.scope);
+          expect(actual.body).toBe(expected.body);
+          expect(
+            cpSlice(result.cleanText, actual.anchor.start, actual.anchor.end),
+          ).toBe(expected.anchorText);
+        });
+      });
+
+      it('produces the expected edit marks', () => {
+        const result = parse(fx.input);
+        expect(
+          result.editMarks.map((m) => ({
+            kind: m.kind,
+            original: m.original,
+            proposed: m.proposed,
+          })),
+        ).toEqual(fx.editMarks);
+      });
     });
-  });
-
-  it('produces the expected edit marks', () => {
-    const result = parse(fx.input);
-    expect(
-      result.editMarks.map((m) => ({
-        kind: m.kind,
-        original: m.original,
-        proposed: m.proposed,
-      })),
-    ).toEqual(fx.editMarks);
-  });
+  }
 });
 
 describe('parse: scope classification (SPEC §6.1)', () => {

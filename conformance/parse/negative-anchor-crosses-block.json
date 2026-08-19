@@ -1,0 +1,21 @@
+{
+  "name": "An anchor MUST NOT cross a block boundary (SPEC §6.2)",
+  "input": "{==one\n\ntwo==}{>>[e1r] spans blocks<<}\n",
+  "cleanText": "one\n\ntwo\n",
+  "frontmatter": null,
+  "comments": [
+    {
+      "id": "e1r",
+      "scope": "span",
+      "body": "spans blocks",
+      "anchorText": "one\n\ntwo"
+    }
+  ],
+  "editMarks": [],
+  "expectedIssues": [
+    {
+      "code": "anchor-crosses-block",
+      "severity": "error"
+    }
+  ]
+}

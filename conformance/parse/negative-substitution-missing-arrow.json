@@ -1,0 +1,14 @@
+{
+  "name": "A substitution without '~>' MUST be reported and treated as prose (SPEC §6.3)",
+  "input": "fix {~~nope~~} this\n",
+  "cleanText": "fix {~~nope~~} this\n",
+  "frontmatter": null,
+  "comments": [],
+  "editMarks": [],
+  "expectedIssues": [
+    {
+      "code": "substitution-missing-arrow",
+      "severity": "error"
+    }
+  ]
+}

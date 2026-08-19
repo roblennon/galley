@@ -4,20 +4,23 @@ import { applyBatch, parse } from '../src/index.js';
 const parseOut = (text: string): [string | null, string][] =>
   parse(text).comments.map((c) => [c.id, c.scope]);
 import type { PatchBatch } from '../src/index.js';
-import { readFixture } from './helpers.js';
+import { expectIssues, readFixtureDir } from './helpers.js';
 
 interface ApplyFixture {
   name: string;
   input: string;
   batch: PatchBatch;
   output: string;
-  report: {
-    appliedIndices: number[];
-    rejected: unknown[];
-    resolved: { id: string; body: string }[];
-    orphaned: string[];
-    unaddressed: string[];
+  /** Every field is optional: a fixture asserts only what it cares about. */
+  report?: {
+    appliedIndices?: number[];
+    rejected?: unknown[];
+    resolved?: { id: string; body: string }[];
+    orphaned?: string[];
+    unaddressed?: string[];
+    responseIssues?: unknown[];
   };
+  expectedIssues?: { code: string; severity: string }[];
 }
 
 function respond(
@@ -27,21 +30,24 @@ function respond(
   return ids.map((comment) => ({ comment, status }));
 }
 
-describe('applyBatch: conformance fixture (SPEC §13 end to end)', () => {
-  const fx = readFixture<ApplyFixture>('apply/spec-13.json');
-
-  it('produces the §13.4 document and report', () => {
-    const { text, report } = applyBatch(fx.input, fx.batch);
-    expect(text).toBe(fx.output);
-    expect(report.applied.map((a) => a.index)).toEqual(
-      fx.report.appliedIndices,
-    );
-    expect(report.rejected).toEqual(fx.report.rejected);
-    expect(report.resolved).toEqual(fx.report.resolved);
-    expect(report.orphaned).toEqual(fx.report.orphaned);
-    expect(report.unaddressed).toEqual(fx.report.unaddressed);
-    expect(report.responseIssues).toEqual([]);
-  });
+/** Every fixture in conformance/apply/. */
+describe('applyBatch: conformance fixtures', () => {
+  for (const { file, fixture: fx } of readFixtureDir<ApplyFixture>('apply')) {
+    it(`${file} — ${fx.name}`, () => {
+      const { text, report } = applyBatch(fx.input, fx.batch);
+      expect(text).toBe(fx.output);
+      const r = fx.report ?? {};
+      if (r.appliedIndices) {
+        expect(report.applied.map((a) => a.index)).toEqual(r.appliedIndices);
+      }
+      if (r.rejected) expect(report.rejected).toEqual(r.rejected);
+      if (r.resolved) expect(report.resolved).toEqual(r.resolved);
+      if (r.orphaned) expect(report.orphaned).toEqual(r.orphaned);
+      if (r.unaddressed) expect(report.unaddressed).toEqual(r.unaddressed);
+      expect(report.responseIssues).toEqual(r.responseIssues ?? []);
+      expectIssues(report.issues, fx.expectedIssues);
+    });
+  }
 });
 
 describe('applyBatch: anchor transformation (SPEC §10.1)', () => {

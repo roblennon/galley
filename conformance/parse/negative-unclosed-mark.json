@@ -1,0 +1,14 @@
+{
+  "name": "An unclosed mark is prose, and MUST be reported (SPEC §11)",
+  "input": "bad {>>never closed\n",
+  "cleanText": "bad {>>never closed\n",
+  "frontmatter": null,
+  "comments": [],
+  "editMarks": [],
+  "expectedIssues": [
+    {
+      "code": "unclosed-mark",
+      "severity": "error"
+    }
+  ]
+}

@@ -5,3 +5,4 @@ dist/
 test-vault/
 .vercel
 .env*
+.cursor-debug-loop/

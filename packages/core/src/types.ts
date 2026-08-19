@@ -1,4 +1,8 @@
 /** Scope of a comment, determined by placement (SPEC §6.1). */
+/** The spec version this library implements (SPEC §12 requires implementations
+ * declare it). Independent of the package version. */
+export const SPEC_VERSION = 1;
+
 export type Scope = 'span' | 'point' | 'block' | 'document';
 
 /**
@@ -109,6 +113,11 @@ export interface Comment {
 export interface ParseResult {
   /** The document with all annotation syntax removed (SPEC §7). */
   cleanText: string;
+  /** True when the source began with a UTF-8 byte order mark. It is stripped
+   * before parsing — left in place it shifts every offset by one, hides
+   * frontmatter behind it, and turns a document comment into a point comment —
+   * and restored by `recompose` so the round trip stays byte-exact. */
+  bom: boolean;
   /** Raw YAML frontmatter including delimiters and trailing blank lines, or
    * null if absent. Not part of clean text. */
   frontmatter: string | null;
@@ -201,6 +210,11 @@ export interface ApplyReport {
   anchorModified: string[];
   /** Identified comments not referenced by any patch in the batch. */
   unaddressed: string[];
+  /** Comments a patch was attributed to whose anchor survived, so they remain
+   * inline. The commonest editing shape — a rewrite *within* the anchored
+   * sentence — lands here rather than in `resolved`, and an adapter needs to
+   * know so it can decide whether the note still applies (SPEC §10.1). */
+  answeredInline: string[];
   responseIssues: ResponseIssue[];
   /** Edit marks whose original text was overwritten by a patch. */
   editMarksDropped: number;

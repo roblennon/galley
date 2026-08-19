@@ -182,6 +182,7 @@ export function addComment(
   const { text: outText } = recompose({
     cleanText: clean,
     frontmatter: parsed.frontmatter,
+    bom: parsed.bom,
     comments: [...parsed.comments, comment],
     editMarks: parsed.editMarks,
   });

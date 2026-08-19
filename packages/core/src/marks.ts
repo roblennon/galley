@@ -68,8 +68,13 @@ export function resolveEditMarks(
     if ('destroyed' in t) {
       const block =
         blockAtOrBefore(newBlocks, t.destroyed.s) ?? { start: 0, end: 0 };
+      // `placement` describes where the mark sat in the PRE-edit document. A
+      // demoted comment must not carry it forward: applyBatch's orphan branch
+      // drops it, this one did not, and a stale pos past the new clean length
+      // made recompose emit the document body more than once.
+      const { placement: _stale, ...withoutPlacement } = rest;
       comments.push({
-        ...rest,
+        ...withoutPlacement,
         scope: 'block',
         anchor: { ...block },
         flags: [...c.flags.filter((f) => f !== 'anchor-lost'), 'anchor-lost'],
@@ -79,10 +84,14 @@ export function resolveEditMarks(
     if (c.scope === 'block') {
       const pos = c.placement?.pos ?? c.anchor.end;
       const t2 = transformRange({ start: pos, end: pos }, edits);
-      const p = 'destroyed' in t2 ? t2.destroyed.s : t2.range.start;
-      const block = blockAtOrBefore(newBlocks, p) ?? { start: 0, end: 0 };
+      const moved = 'destroyed' in t2 ? t2.destroyed.s : t2.range.start;
+      const block = blockAtOrBefore(newBlocks, moved) ?? { start: 0, end: 0 };
+      // `placement` records whitespace coherent with one specific clean-text
+      // state; after marks resolve, that state is gone. The destroyed branch
+      // already drops it, and resolveEditMarks rewrites the whole document
+      // anyway, so byte-exactness of untouched documents is not at stake.
       const out: Comment = { ...rest, anchor: { ...block } };
-      if (c.placement) out.placement = { ...c.placement, pos: p };
+      delete out.placement;
       comments.push(out);
       continue;
     }
@@ -98,6 +107,7 @@ export function resolveEditMarks(
   const { text: out } = recompose({
     cleanText: newClean,
     frontmatter: parsed.frontmatter,
+    bom: parsed.bom,
     comments,
     editMarks: marks.filter((m): m is NonNullable<typeof m> => m !== null),
   });

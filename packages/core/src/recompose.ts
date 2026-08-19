@@ -35,10 +35,42 @@ export function recompose(
   result: Pick<
     ParseResult,
     'cleanText' | 'frontmatter' | 'comments' | 'editMarks'
-  >,
+  > &
+    Partial<Pick<ParseResult, 'bom'>>,
 ): { text: string } {
   const clean = result.cleanText;
   const cleanLen = cpLength(clean);
+
+  // SPEC §6.1: a tool MUST refuse to emit a mark that would parse differently
+  // than intended, rather than write it and lose the difference. addComment
+  // enforces this on the authoring path; recompose is the other way a comment
+  // reaches a document, and it validated nothing (GAL-REV-007).
+  for (const c of result.comments) {
+    if (c.body.includes('<<}')) {
+      throw new Error(
+        `comment ${c.id === null ? '(anonymous)' : `[${c.id}]`} body contains the closing delimiter '<<}' and cannot be represented (SPEC §6.1)`,
+      );
+    }
+    if (c.id !== null && !/^[A-Za-z0-9]{1,8}$/.test(c.id)) {
+      throw new Error(
+        `comment id '${c.id}' is not a valid identifier; it would be emitted as body text and the comment would stop being addressable (SPEC §5.1)`,
+      );
+    }
+    if (c.placement && (c.placement.pos < 0 || c.placement.pos > cleanLen)) {
+      throw new Error(
+        `comment ${c.id === null ? '(anonymous)' : `[${c.id}]`} placement position ${c.placement.pos} is out of range for clean text of length ${cleanLen}`,
+      );
+    }
+    if (
+      c.anchor.start < 0 ||
+      c.anchor.end < c.anchor.start ||
+      c.anchor.end > cleanLen
+    ) {
+      throw new Error(
+        `comment ${c.id === null ? '(anonymous)' : `[${c.id}]`} anchor [${c.anchor.start}, ${c.anchor.end}) is out of range for clean text of length ${cleanLen}`,
+      );
+    }
+  }
 
   // Code point → UTF-16 index table for slicing.
   const cpU16 = new Uint32Array(cleanLen + 1);
@@ -58,6 +90,9 @@ export function recompose(
     cp >= 0 && cp < cleanLen ? sliceCp(cp, cp + 1) : '';
 
   const events: Emission[] = [];
+  // Positions where a block comment has already been emitted with conventional
+  // spacing, so later ones there do not each re-add the separator.
+  const fallbackPositions = new Set<number>();
   let ord = 0;
 
   // Carrier comments are serialized by their edit mark.
@@ -133,9 +168,19 @@ export function recompose(
       } else {
         pos =
           charAtCp(c.anchor.end) === '\n' ? c.anchor.end + 1 : c.anchor.end;
+        // `before` is computed against the ORIGINAL text, so a second block
+        // comment appended at the same position recomputes the same separator
+        // and stacks another blank line. The first one already supplied it.
         before =
-          pos === 0 ? '' : charAtCp(pos - 1) === '\n' ? '\n' : '\n\n';
+          pos === 0
+            ? ''
+            : fallbackPositions.has(pos)
+              ? '\n'
+              : charAtCp(pos - 1) === '\n'
+                ? '\n'
+                : '\n\n';
         after = '\n';
+        fallbackPositions.add(pos);
       }
       events.push({
         pos,
@@ -237,5 +282,7 @@ export function recompose(
     cursor = e.pos;
   }
   out += sliceCp(cursor, cleanLen);
-  return { text: out };
+  // Restored last, outside every offset calculation, so it never participates
+  // in the arithmetic that made it a bug in the first place.
+  return { text: result.bom ? '\uFEFF' + out : out };
 }

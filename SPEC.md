@@ -67,6 +67,9 @@ described in RFC 2119.
 - **Comment** — an identifier, an anchor or placement, and a body.
 - **Scope** — whether a comment addresses a point, a span, a block, or the
   document.
+- **Block** — a maximal run of consecutive lines in clean text that are not
+  blank, where a blank line is one containing only spaces and tabs. Block
+  boundaries are computed over clean text by this rule alone; see §7.1.
 - **Edit mark** — an inline insertion, deletion, or substitution (§6.3).
 - **Patch** — a single proposed text change, expressed as data rather than markup.
 - **Patch batch** — a set of patches plus a response for every comment (§8).
@@ -205,8 +208,9 @@ rather than emit a mark that parses differently than intended.
 ### 6.2 Anchoring rules
 
 - An anchor MUST NOT cross a block boundary.
-- An anchor MUST NOT partially overlap a Markdown emphasis, link, or code span. It
-  MUST either contain the construct entirely or lie entirely outside it.
+- An anchor SHOULD NOT partially overlap a Markdown emphasis, link, or code
+  span; it should either contain the construct entirely or lie entirely outside
+  it. This is authoring guidance, not a conformance requirement — see below.
 - Anchors MUST NOT overlap each other.
 - Anchors MUST NOT nest.
 - A comment mark forming a span comment MUST immediately follow its highlight's
@@ -219,6 +223,18 @@ The overlap and nesting restrictions exist so that every conforming document can
 be rendered by decomposing text into non-overlapping segments. Implementations
 encountering overlapping or nested anchors MUST report an error and MUST NOT guess
 at the intended structure.
+
+The emphasis rule is deliberately a SHOULD NOT rather than a MUST NOT. Enforcing
+it requires recognizing Markdown inline structure, which would put a full inline
+parser — the most intricate part of CommonMark — inside every conforming
+implementation in every language, for a rule whose violation costs nothing in
+data terms: an anchor that starts inside `*emphasis*` and ends outside it still
+produces correct clean text, still round-trips byte-exactly, and still applies
+patches correctly. What suffers is only how a highlight looks when rendered.
+Weighed against the same reasoning as §7.1's block definition, the dependency is
+not worth the tidiness. Editors SHOULD snap an anchor outward to whole
+constructs where they can, and implementations MAY report a partial overlap as a
+warning; neither is required to conform.
 
 ### 6.3 Edit marks
 
@@ -283,6 +299,58 @@ anchors are ranges into it.
 
 All patches are expressed against clean text. A patch batch therefore applies
 identically to an annotated document and to a copy with annotations stripped.
+
+---
+
+A block or document comment occupies its own line, so attaching one after the
+final block of a document that does not end in a line terminator requires one to
+exist. Clean text therefore gains a single trailing newline in that case, and a
+document with no final newline may acquire one once it is annotated. This is a
+property of the format rather than an implementation choice: no serialization of
+a trailing block comment avoids it. Implementations MUST NOT add a trailing
+newline in any other circumstance.
+
+A UTF-8 byte order mark, when present at the start of a document, is not part
+of clean text and does not participate in offsets. Implementations MUST strip it
+before parsing and MUST restore it when writing the document back, so that a
+file carrying one round-trips unchanged. Treating it as content shifts every
+offset by one, hides frontmatter behind it, and reclassifies a leading document
+comment as a point comment.
+
+## 7.1 Block boundaries
+
+A **block** is a maximal run of consecutive non-blank lines in clean text. A
+line is blank when it contains only spaces and tabs. A block's range excludes
+the line terminator that ends it.
+
+Implementations MUST compute block boundaries by this rule alone. They MUST NOT
+parse Markdown structure to determine them. Two conforming implementations
+therefore agree on block boundaries for every document, in any language, with no
+Markdown parser and no shared dependency.
+
+This is a deliberate simplification, and it has consequences worth stating
+plainly rather than discovering:
+
+- A heading followed immediately by a paragraph, with no blank line between
+  them, is **one** block. An anchor may span both.
+- A list whose items are not separated by blank lines is **one** block. A list
+  with blank lines between items is several.
+- A fenced code block containing a blank line is **two or more** blocks, because
+  the fence is not interpreted.
+- Two paragraphs separated only by a line of spaces are still two blocks, since
+  such a line is blank by this definition.
+
+The alternative — defining blocks by Markdown structure — would be more faithful
+to how a reader sees a document, but it would require every implementation to
+carry a CommonMark parser, and would make block boundaries depend on which
+Markdown flavor an implementation chose. For a format whose purpose is that a
+plain-text document is self-describing and portable, that cost is not worth
+paying. This rule may be revisited in a later spec version; it will not change
+within version 1.
+
+Because a heading and the paragraph beneath it may be one block, tools that
+create anchors SHOULD avoid spanning a line that begins with `#` when a
+narrower anchor expresses the same intent.
 
 ---
 
