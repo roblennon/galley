@@ -69,6 +69,25 @@ interface IMark {
  * (SPEC §7). Line endings are normalized to '\n' first; all public offsets
  * are Unicode code points over clean text.
  */
+/** Match of `/\n([ \t]*)\n([ \t]*)$/` against `s`, found by walking back from
+ * the end so cost is proportional to the trailing whitespace rather than to the
+ * whole string. Returns the same shape the regex did. */
+function trailingBlankSeparator(
+  s: string,
+): { index: number; 1: string; 2: string } | null {
+  let i = s.length;
+  while (i > 0 && (s[i - 1] === ' ' || s[i - 1] === '\t')) i--;
+  const tail = s.slice(i);
+  if (i === 0 || s[i - 1] !== '\n') return null;
+  i--;
+  let j = i;
+  while (j > 0 && (s[j - 1] === ' ' || s[j - 1] === '\t')) j--;
+  const mid = s.slice(j, i);
+  if (j === 0 || s[j - 1] !== '\n') return null;
+  const m = { index: j - 1, 1: mid, 2: tail } as { index: number; 1: string; 2: string };
+  return m;
+}
+
 export function parse(text: string): ParseResult {
   const full = normalizeLineEndings(text);
 
@@ -89,12 +108,25 @@ export function parse(text: string): ParseResult {
   const fmU16 = frontmatter?.length ?? 0;
 
   const issues: Issue[] = [];
-  const reportIndex = (u16: number) => utf16ToCp(full, fmU16 + u16);
+  // Built on first use: a document with no issues never pays for it, and one
+  // with many no longer walks the whole string per issue (was quadratic).
+  let fullCpIndex: ((utf16: number) => number) | null = null;
+  const reportIndex = (u16: number) => {
+    fullCpIndex ??= buildCpIndex(full);
+    return fullCpIndex(fmU16 + u16);
+  };
   const tokens = scan(body, issues, reportIndex);
 
   let clean = '';
   const comments: IComment[] = [];
   const marks: IMark[] = [];
+  // Highest clean-text offset any annotation is anchored to, maintained as we
+  // go. Recomputing this per comment token was both quadratic and, via a
+  // spread into Math.max, a stack overflow on large documents.
+  let anchoredMaxSoFar = 0;
+  const noteAnchored = (end: number | null) => {
+    if (end !== null && end > anchoredMaxSoFar) anchoredMaxSoFar = end;
+  };
 
   // Verbatim raw↔clean segments (body-local raw offsets; shifted past the
   // frontmatter on output). Every clean chunk is copied unchanged from the
@@ -180,6 +212,7 @@ export function parse(text: string): ParseResult {
       src: [baseU16 + tok.start, baseU16 + tok.end],
     };
     marks.push(mark);
+    noteAnchored(mark.aU[1]);
     return mark;
   };
 
@@ -256,6 +289,7 @@ export function parse(text: string): ParseResult {
           srcAnchor: [tok.start + 3, tok.end - 3],
           srcTail: [tok.end - 3, next.end],
         });
+        noteAnchored(comments[comments.length - 1]!.aU?.[1] ?? null);
         pos = next.end;
         t++;
         prevAdj = null;
@@ -285,18 +319,14 @@ export function parse(text: string): ParseResult {
       const alone =
         /^[ \t]*$/.test(beforeOnLine) && /^[ \t]*$/.test(afterOnLine);
       const cleanBlank = /^\s*$/.test(clean);
-      const sepMatch = /\n([ \t]*)\n([ \t]*)$/.exec(clean);
+      const sepMatch = trailingBlankSeparator(clean);
 
       // Document/block classification must not orphan offsets already
       // recorded into the whitespace it would consume: a document comment
       // resets clean text entirely, and a block comment trims the blank
       // separator. If any earlier annotation is anchored there, this mark
       // reads as a point comment instead.
-      const anchoredMax = Math.max(
-        0,
-        ...marks.map((m) => m.aU[1]),
-        ...comments.map((c) => (c.aU === null ? 0 : c.aU[1])),
-      );
+      const anchoredMax = anchoredMaxSoFar;
       const docSafe = cleanBlank && anchoredMax === 0 && marks.length === 0;
       const blockSafe = sepMatch !== null && sepMatch.index + 1 >= anchoredMax;
 
@@ -325,6 +355,7 @@ export function parse(text: string): ParseResult {
             placementU: { posU: 0, before, after },
             srcExtent: [tok.start, tok.end],
           });
+          noteAnchored(comments[comments.length - 1]!.aU?.[1] ?? null);
           pos = newPos;
         } else {
           // Block comment: trim the blank-line separator from clean (SPEC §7).
@@ -341,6 +372,7 @@ export function parse(text: string): ParseResult {
             placementU: { posU: clean.length, before, after },
             srcExtent: [tok.start, tok.end],
           });
+          noteAnchored(comments[comments.length - 1]!.aU?.[1] ?? null);
           pos = hadNL ? lineEnd + 1 : lineEnd;
         }
         prevAdj = null;
@@ -360,6 +392,7 @@ export function parse(text: string): ParseResult {
           carrierOf: markIndex,
           srcExtent: [tok.start, tok.end],
         });
+        noteAnchored(comments[comments.length - 1]!.aU?.[1] ?? null);
         pos = tok.end;
         prevAdj = null;
         continue;
@@ -373,6 +406,7 @@ export function parse(text: string): ParseResult {
         aU: [clean.length, clean.length],
         srcExtent: [tok.start, tok.end],
       });
+      noteAnchored(comments[comments.length - 1]!.aU?.[1] ?? null);
       pos = tok.end;
       prevAdj = null;
       continue;
