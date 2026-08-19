@@ -322,6 +322,14 @@ export function applyBatch(
         });
         continue;
       }
+      if (hasUnpairedSurrogate(p.replace)) {
+        rejected.push({
+          index: i,
+          code: 'invalid-patch',
+          message: `replace contains an unpaired surrogate; it would not survive being written as UTF-8, and no later patch could match it to remove it`,
+        });
+        continue;
+      }
       const matches = findAllCp(clean, p.find, cleanCpAt);
       if (matches.length === 0) {
         rejected.push({
@@ -710,6 +718,9 @@ function applyAsEditMarks(
     // with the highlight. That is invalid whether or not the patch is
     // attributed to the comment — the previous attribution exemption only ever
     // reached this straddle case, and let it through.
+    // The edit's own extent becomes the mark in tracked mode, so a range that
+    // spans a blank line yields a mark crossing a block boundary (SPEC §6.3).
+    const spansBlock = introducesBlockBoundary(cpSlice(clean, ed.s, ed.e));
     const clipsAnchor = parsed.comments.some(
       (c) =>
         c.scope === 'span' &&
@@ -717,6 +728,15 @@ function applyAsEditMarks(
         !containsRange(ed.s, ed.e, c.anchor) &&
         !(c.anchor.start <= ed.s && ed.e <= c.anchor.end),
     );
+    if (spansBlock) {
+      rejected.push({
+        index: ed.index,
+        code: 'conflict',
+        message:
+          'Tracked change would span a block boundary; an edit mark must not (SPEC §6.3)',
+      });
+      continue;
+    }
     if (nestsMark || clipsAnchor) {
       rejected.push({
         index: ed.index,
