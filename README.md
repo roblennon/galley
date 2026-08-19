@@ -92,6 +92,7 @@ flagged as anchor-lost. It is never silently dropped.
 | [`packages/codemirror`](packages/codemirror) | Editor models shared by CodeMirror-based adapters. |
 | [`conformance/`](conformance) | Fixtures as data, so any implementation in any language can check itself. |
 | [`prompts/`](prompts) | The reference prompt, versioned with the spec. How a model learns the format. |
+| [`RELEASING.md`](RELEASING.md) | Maintainer release process: promotion, plugin betas, versioning. |
 
 ## Try it
 

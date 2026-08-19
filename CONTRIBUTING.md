@@ -113,6 +113,19 @@ What gets reviewed is the change, on its merits. Please do read what you submit
 and be able to speak to why it works — that is the same bar as any other
 contribution, and the only one that really counts.
 
+## How changes reach people
+
+Work lands on `main` by pull request; there is no `develop` branch. Every pull
+request gets its own preview deployment of the web lab, so a change to the
+editor can be looked at rather than imagined.
+
+Merging to `main` does not publish anything. The live site updates only when a
+maintainer promotes a build, and releases are cut deliberately. If you need to
+know when your change ships, ask on the pull request — the answer is not
+"whenever it merges."
+
+Maintainers: see [RELEASING.md](RELEASING.md).
+
 ## Licensing of contributions
 
 This project is Apache-2.0. Under section 5 of that license, anything you
