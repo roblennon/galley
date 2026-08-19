@@ -294,3 +294,109 @@ describe('SPEC_VERSION is exported and tracks SPEC.md', () => {
     expect(SPEC_VERSION).toBe(Number(m![1]));
   });
 });
+
+/** Guards that existed but had no test: reverting each one left the suite
+ * green, which is the definition of coverage that only looks like protection.
+ * Each of these was confirmed to fail with its guard removed. */
+describe('guards the mutation audit found untested', () => {
+  it('recompose rejects an out-of-range placement position', () => {
+    const layer = parse('Hello world.\n');
+    layer.comments.push({
+      id: 'a1a',
+      scope: 'block',
+      body: 'note',
+      anchor: { start: 0, end: 12 },
+      flags: [],
+      placement: { pos: 900, before: '\n', after: '\n' },
+    } as Comment);
+    // Without the check, cpU16[900] is undefined, slice runs to the end, and
+    // the document body is emitted twice.
+    expect(() => recompose(layer)).toThrow(/placement position/);
+  });
+
+  it('rejects a find longer than the cap rather than scanning for it', () => {
+    const { report } = applyBatch('Alpha bravo charlie.\n', {
+      spec: 1,
+      responses: [],
+      patches: [{ type: 'span', find: 'q'.repeat(5000), replace: 'x', reason: 'r' }],
+    });
+    expect(report.rejected).toHaveLength(1);
+    expect(report.rejected[0]!.code).toBe('invalid-patch');
+    expect(report.rejected[0]!.message).toMatch(/code points/);
+  });
+
+  it('rejects a replace that would write an unpaired surrogate', () => {
+    const { text, report } = applyBatch('Emoji \u{1F600} here.\n', {
+      spec: 1,
+      responses: [],
+      patches: [{ type: 'span', find: ' here', replace: '\uD83D', reason: 'r' }],
+    });
+    expect(report.rejected[0]!.code).toBe('invalid-patch');
+    // It would not survive being written as UTF-8, and no later patch could
+    // match it to remove it.
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(text)).toBe(false);
+  });
+
+  it('rejects a tracked edit whose own range spans a block boundary', () => {
+    const doc = 'Para one.\n\nPara two.\n';
+    const { text, report } = applyBatch(
+      doc,
+      {
+        spec: 1,
+        responses: [],
+        patches: [
+          { type: 'span', find: 'one.\n\nPara two', replace: 'one. Para two', reason: 'j' },
+        ],
+      },
+      { asEditMarks: true },
+    );
+    // The edit's extent becomes the mark, and an edit mark must not span a
+    // block boundary (SPEC §6.3).
+    expect(report.rejected[0]!.code).toBe('conflict');
+    expect(text).toBe(doc);
+    expect(validate(text).valid).toBe(true);
+  });
+
+  it('rejects comments given as a bare string instead of an array', () => {
+    const { report } = applyBatch('Alpha {==bravo==}{>>[a1] n<<} charlie.\n', {
+      spec: 1,
+      responses: [{ comment: 'a1', status: 'patched' }],
+      patches: [
+        { type: 'span', find: 'bravo', replace: 'X', comments: 'a1' },
+      ],
+    } as unknown as PatchBatch);
+    // Silently accepted before, as an unattributed patch: the comment never
+    // resolved and the patch lost precedence, with nothing reported.
+    expect(report.rejected[0]!.code).toBe('invalid-patch');
+  });
+
+  it('does not throw on a null or non-object batch', () => {
+    const doc = 'Alpha bravo.\n';
+    for (const bad of [null, undefined, 'nope', 42]) {
+      expect(() => applyBatch(doc, bad as unknown as PatchBatch)).not.toThrow();
+    }
+  });
+
+  it('answeredInline names a comment only when an applied edit fell inside its anchor', () => {
+    const doc = 'The quick brown fox jumps over it.\n';
+    const withComment = applyBatch(doc, { spec: 1, responses: [], patches: [] });
+    expect(withComment.report.answeredInline).toEqual([]);
+
+    const annotated = 'The {==quick brown fox==}{>>[b1] tighten<<} jumps.\n';
+    const rejectedPatch = applyBatch(annotated, {
+      spec: 1,
+      responses: [{ comment: 'b1', status: 'patched' }],
+      patches: [{ type: 'span', find: 'NOT PRESENT', replace: 'x', comments: ['b1'] }],
+    });
+    // A rejected patch must not report its comment as answered.
+    expect(rejectedPatch.report.rejected).toHaveLength(1);
+    expect(rejectedPatch.report.answeredInline).toEqual([]);
+
+    const inside = applyBatch(annotated, {
+      spec: 1,
+      responses: [{ comment: 'b1', status: 'patched' }],
+      patches: [{ type: 'span', find: 'brown', replace: 'red', comments: ['b1'] }],
+    });
+    expect(inside.report.answeredInline).toEqual(['b1']);
+  });
+});
