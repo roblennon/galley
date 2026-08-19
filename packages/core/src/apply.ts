@@ -1,7 +1,7 @@
 import { parse, normalizeLineEndings } from './parse.js';
 import { recompose } from './recompose.js';
 import { blockRanges, blockAtOrBefore, blockContaining } from './blocks.js';
-import { cpLength, cpSlice, cpToUtf16, utf16ToCp } from './unicode.js';
+import { cpLength, cpSlice, cpToUtf16, utf16ToCp, buildCpIndex } from './unicode.js';
 import { shiftPoint, clampPoint, transformRange, type Edit } from './transform.js';
 import type {
   ApplyReport,
@@ -71,23 +71,44 @@ function introducesBlockBoundary(replace: string): boolean {
 
 /** True when a span patch's match lands strictly inside an existing comment
  * anchor or edit mark, where a new block boundary would break SPEC §6.2/§6.3. */
-function insideAnnotationOf(
+/** Ranges of the annotations a [start,end) edit falls within. Only a SPAN
+ * anchor can be split by a new block boundary — a point anchor is zero-width, a
+ * block anchor IS a block so splitting it re-anchors the comment, and a
+ * document anchor covers the file. */
+function enclosingAnnotations(
   start: number,
   end: number,
   comments: readonly Comment[],
   marks: readonly EditMark[],
-): boolean {
+): Range[] {
+  const out: Range[] = [];
   for (const c of comments) {
-    // Only a SPAN anchor can be split by a new block boundary. A point anchor
-    // is zero-width; a block anchor IS a block, and splitting it re-anchors the
-    // comment rather than violating §6.2; a document anchor covers the whole
-    // file, so testing it rejected every paragraph split in any document that
-    // happened to carry a document-level note.
     if (c.scope !== 'span') continue;
-    if (c.anchor.start < end && start < c.anchor.end) return true;
+    if (c.anchor.start < end && start < c.anchor.end) out.push(c.anchor);
   }
   for (const m of marks) {
-    if (m.range.start < end && start < m.range.end) return true;
+    if (m.range.start < end && start < m.range.end) out.push(m.range);
+  }
+  return out;
+}
+
+/** Would applying `replace` over [start,end) leave a blank line inside any
+ * annotation it touches? Testing `replace` alone was not enough: a replacement
+ * ending in a single newline fuses with a newline already present in the anchor
+ * and forms a blank line there, producing a document validate() rejects. */
+function splitsAnnotation(
+  clean: string,
+  start: number,
+  end: number,
+  replace: string,
+  comments: readonly Comment[],
+  marks: readonly EditMark[],
+): boolean {
+  const enclosing = enclosingAnnotations(start, end, comments, marks);
+  for (const r of enclosing) {
+    const head = cpSlice(clean, r.start, Math.max(r.start, start));
+    const tail = cpSlice(clean, Math.min(r.end, end), r.end);
+    if (introducesBlockBoundary(head + replace + tail)) return true;
   }
   return false;
 }
@@ -102,11 +123,19 @@ function describe(v: unknown): string {
   return `[${t}]`;
 }
 
-function findAllCp(clean: string, find: string): number[] {
+function findAllCp(
+  clean: string,
+  find: string,
+  cpAt?: (utf16: number) => number,
+): number[] {
   const out: number[] = [];
+  // Converting each hit with utf16ToCp walked the whole string per match, so a
+  // short `find` on a large document was quadratic: 24s on 200 KB. The shared
+  // index makes each conversion O(1).
+  const toCp = cpAt ?? ((u: number) => utf16ToCp(clean, u));
   let idx = clean.indexOf(find);
   while (idx >= 0) {
-    out.push(utf16ToCp(clean, idx));
+    out.push(toCp(idx));
     idx = clean.indexOf(find, idx + 1);
   }
   return out;
@@ -200,7 +229,8 @@ export function applyBatch(
           code: 'invalid-patch' as const,
           message: 'document contains duplicate identifiers; resolve them before applying a batch (SPEC §5.1)',
         })),
-        resolved: [], orphaned: [], anchorModified: [], unaddressed: [],
+        resolved: [], orphaned: [], anchorModified: [],
+        unaddressed: [...byId.keys()],
         answeredInline: [], responseIssues, editMarksDropped: 0,
         issues: parsed.issues,
       },
@@ -224,6 +254,7 @@ export function applyBatch(
   // One code-point view of the clean text, shared by every candidate report in
   // this batch; rebuilding it per patch made many small rejections quadratic.
   const cleanCp: readonly string[] = [...clean];
+  const cleanCpAt = buildCpIndex(clean);
 
   // Locate every patch against the original clean text (SPEC §10 step 2).
   const rejected: RejectedPatch[] = [];
@@ -291,7 +322,7 @@ export function applyBatch(
         });
         continue;
       }
-      const matches = findAllCp(clean, p.find);
+      const matches = findAllCp(clean, p.find, cleanCpAt);
       if (matches.length === 0) {
         rejected.push({
           index: i,
@@ -331,8 +362,7 @@ export function applyBatch(
       }
       const endCp = startCp + cpLength(p.find);
       if (
-        introducesBlockBoundary(p.replace) &&
-        insideAnnotationOf(startCp, endCp, parsed.comments, parsed.editMarks)
+        splitsAnnotation(clean, startCp, endCp, p.replace, parsed.comments, parsed.editMarks)
       ) {
         rejected.push({
           index: i,
@@ -350,6 +380,11 @@ export function applyBatch(
         attributed,
       });
     } else if (p.type === 'block') {
+      // Block replacements were written raw while span replacements were
+      // normalized, so a block patch could put CRLF into clean text, breaking
+      // SPEC §7 normalization and the byte-exact round trip — with validate()
+      // reporting the result clean.
+      p = { ...p, replace: typeof p.replace === 'string' ? normalizeLineEndings(p.replace) : p.replace };
       if (typeof p.comment !== 'string' || typeof p.replace !== 'string') {
         rejected.push({
           index: i,
@@ -599,7 +634,21 @@ export function applyBatch(
   const survivingIds = new Set(
     newComments.map((c) => c.id).filter((id): id is string => id !== null),
   );
-  const answeredInline = [...referenced].filter((id) => survivingIds.has(id));
+  // Only edits that were actually APPLIED, and only where the edit fell inside
+  // the comment's own anchor. Deriving this from `referenced` named comments
+  // whose patches were rejected — the document untouched, and the report
+  // telling an adapter the note had been handled.
+  const answeredInline = [...survivingIds].filter((id) => {
+    const c = byId.get(id);
+    if (!c) return false;
+    return kept.some(
+      (ed) =>
+        ed.attributed.has(id) &&
+        ed.s >= c.anchor.start &&
+        ed.e <= c.anchor.end &&
+        c.anchor.start !== c.anchor.end,
+    );
+  });
 
   const report: ApplyReport = {
     applied: kept
@@ -740,7 +789,17 @@ function applyAsEditMarks(
   const survivingIds = new Set(
     newComments.map((c) => c.id).filter((id): id is string => id !== null),
   );
-  const answeredInline = [...referenced].filter((id) => survivingIds.has(id));
+  const answeredInline = [...survivingIds].filter((id) => {
+    const c = ctx.byId.get(id);
+    if (!c) return false;
+    return accepted.some(
+      (ed) =>
+        ed.attributed.has(id) &&
+        ed.s >= c.anchor.start &&
+        ed.e <= c.anchor.end &&
+        c.anchor.start !== c.anchor.end,
+    );
+  });
 
   const report: ApplyReport = {
     applied: accepted

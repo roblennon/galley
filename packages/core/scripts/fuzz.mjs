@@ -139,11 +139,18 @@ function randomBatch(p) {
  * guard (SPEC §6.2/§6.3) and the astral/surrogate paths — those are rejection
  * paths, and a fuzzer that never generates them never exercises them. */
 function randomReplace() {
-  const r = ri(10);
+  const r = ri(12);
   if (r === 0) return '';
   if (r === 1) return pick(WORDS) + '\n\n' + pick(WORDS);
   if (r === 2) return '🧵 ' + pick(WORDS) + ' 𝔤𝔞𝔩';
   if (r === 3) return pick(WORDS) + '\n' + pick(WORDS);
+  // Leading and trailing newlines. Their absence made every replacement start
+  // with a word, so a bug that dropped a leading newline from the written text
+  // was unreachable by this generator — not tolerated by a matcher, simply
+  // never exercised. Boundary characters at the edges of a replacement are
+  // exactly where off-by-one writes hide.
+  if (r === 4) return '\n' + pick(WORDS);
+  if (r === 5) return pick(WORDS) + '\n';
   return pick(WORDS) + ' ' + pick(WORDS);
 }
 
@@ -175,7 +182,7 @@ function checkApply(doc, label) {
   // satisfied by a run that rejected every patch and changed nothing.
   trackedEq(after.cleanText, expectedCleanText(before.cleanText, batch, report),
     `${label}: patched clean text does not match the report`,
-    JSON.stringify({ doc, batch, out, applied: report.applied, rejected: report.rejected }));
+    JSON.stringify({ doc, batch, out, applied: report.applied, rejected: report.rejected }), 'B');
   const afterIds = new Set(after.comments.filter((c) => c.id !== null).map((c) => c.id));
   const resolvedIds = new Set(report.resolved.map((r) => r.id));
   for (const id of beforeIds) {
@@ -211,27 +218,33 @@ const KNOWN_DEFECTS = [
   {
     id: "accept-all in tracked mode does not land where the destructive path lands: blank lines differ around a comment whose block was rewritten, so the two routes to the same edit produce different whitespace",
     repro: "see FUZZ_SHOW_DEFECT=1 context; class D, first seen at seed 56. Content is identical; only separator whitespace differs.",
-    matches: (actual, expected) => {
-      const ins = soleInsertion(actual, expected);
-      // Past the end: the body is emitted twice (or more). Inside a paragraph:
-      // the note's own line splits it, inserting a blank line.
-      return ins === '\n\n' || (ins !== null && expected.length > 8 && ins.includes(expected));
-    },
+    // Scoped to class D and to a pure blank-line insertion. The previous form
+    // also matched `ins.includes(expected)`, which swallowed whole-document
+    // duplication — a far worse defect wearing the same signature.
+    classes: ['D'],
+    matches: (actual, expected) => soleInsertion(actual, expected) === '\n\n',
   },
   {
-    id: 'report.applied[].range does not exactly describe the output for a block patch on a final block with no trailing newline: replaying the reported range over the original clean text differs from the actual result by a trailing newline',
+    id: 'a document whose source has no trailing newline gains one: the output is exactly the expected text plus "\\n". Observable as a report/output mismatch in class B and as a clean-text change in class D — one root cause, two symptoms',
     repro: "see FUZZ_SHOW_DEFECT=1 context; class B, first seen at seed 14.",
+    // Scoped to class B, and to a SINGLE trailing newline at the very end —
+    // the actual signature of this defect. The previous /^\n+$/ anywhere form
+    // absorbed any newline-only divergence in the codebase, including a
+    // replacement silently losing its leading newline.
+    classes: ['B', 'D'],
+    // Narrow in the way that matters: the divergence must be trailing newlines
+    // at the very END of the string. The previous form allowed a newline-only
+    // insertion ANYWHERE, which is what let a replacement silently losing its
+    // leading newline pass 2000 seeds as "all invariants held".
     matches: (actual, expected) => {
-      const ins = soleInsertion(actual, expected) ?? soleInsertion(expected, actual);
-      return ins !== null && /^\n+$/.test(ins);
+      const longer = actual.length > expected.length ? actual : expected;
+      const shorter = actual.length > expected.length ? expected : actual;
+      return longer === shorter + '\n' || longer === shorter + '\n\n';
     },
   },
 ];
 
-const CLIPS_OWN_ANCHOR = {
-  id: 'in tracked mode a span patch attributed to a comment is exempt from the clips-anchor check, so it may straddle that comment’s own anchor boundary; the emitted mark interleaves with the {== ==} delimiters and the document is corrupt — the prose gains literal CriticMarkup, the comment degrades to a point, and validate() reports nothing (or, worse, an unclosed-mark error)',
-  repro: "applyBatch('aaa {==bbb==}{>>[k1] note<<} ccc\\n', { spec: 1, responses: [{ comment: 'k1', status: 'patched' }], patches: [{ type: 'span', find: 'a b', replace: 'Z', comments: ['k1'] }] }, { asEditMarks: true })",
-};
+
 
 /** True when an applied tracked patch partially overlaps a span anchor —
  * overlapping it without either range containing the other. */
@@ -247,10 +260,12 @@ function clipsOwnAnchor(before, applied) {
 
 /** Compare, tagging a mismatch that is a known open defect so the caller can
  * count it rather than fail on it. */
-function trackedEq(actual, expected, msg, ctx) {
+function trackedEq(actual, expected, msg, ctx, cls) {
   if (actual === expected) return;
   const e = new Error(`${msg}\n--- actual ---\n${JSON.stringify(actual)}\n--- expected ---\n${JSON.stringify(expected)}\n--- ctx ---\n${ctx}`);
-  const known = KNOWN_DEFECTS.find((d) => d.matches(actual, expected));
+  const known = KNOWN_DEFECTS.find(
+    (d) => (!d.classes || (cls && d.classes.includes(cls))) && d.matches(actual, expected),
+  );
   if (known) e.knownDefect = known.id + (known.repro ? `\n    repro: ${known.repro}` : '');
   throw e;
 }
@@ -266,25 +281,22 @@ function checkTracked(doc, label) {
   const ctx = () => JSON.stringify({ doc, batch });
   const tracked = applyBatch(doc, batch, { asEditMarks: true });
   if (clipsOwnAnchor(before, tracked.report.applied)) {
-    // Root-cause detector, not a text signature: this batch was accepted into
-    // tracked mode with a mark that straddles one end of a span anchor, which
-    // the format cannot represent. Everything downstream of it is corrupt by
-    // construction, so stop here rather than re-report the same defect as a
-    // dozen different symptoms.
-    const e = new Error(`${label}: a tracked mark straddles a span anchor`);
-    e.knownDefect = CLIPS_OWN_ANCHOR.id + `\n    repro: ${CLIPS_OWN_ANCHOR.repro}`;
-    throw e;
+    // The format cannot represent a tracked mark straddling one end of a span
+    // anchor. applyBatch must reject such a patch, so reaching here is a
+    // regression and is FATAL — it was briefly tolerated, which meant the guard
+    // protecting against it could be removed with the suite still green.
+    throw new Error(`${label}: a tracked mark straddles a span anchor (must have been rejected)\n${ctx()}`);
   }
   const tp = parse(tracked.text);
   const trackedErrs = tp.issues.filter((i) => i.severity === 'error');
   if (trackedErrs.length) throw new Error(`${label}: tracked output has errors ${JSON.stringify(trackedErrs)}\n${ctx()}`);
   assertEq(recompose(tp).text, tracked.text, `${label}: tracked output round trip`, ctx());
   // Marks carry the proposal; the prose itself is untouched.
-  trackedEq(tp.cleanText, before.cleanText, `${label}: tracked run changed the clean text`, ctx());
+  trackedEq(tp.cleanText, before.cleanText, `${label}: tracked run changed the clean text`, ctx(), 'D');
 
   const rejectedAll = resolveEditMarks(tracked.text, { action: 'reject' });
   const rp = parse(rejectedAll.text);
-  trackedEq(rp.cleanText, before.cleanText, `${label}: reject-all did not restore the prose`, ctx());
+  trackedEq(rp.cleanText, before.cleanText, `${label}: reject-all did not restore the prose`, ctx(), 'D');
   assertEq(recompose(rp).text, rejectedAll.text, `${label}: reject-all round trip`, ctx());
   if (rp.issues.some((i) => i.severity === 'error')) {
     throw new Error(`${label}: reject-all produced errors ${JSON.stringify(rp.issues)}\n${ctx()}`);
@@ -301,7 +313,7 @@ function checkTracked(doc, label) {
     === JSON.stringify(destructive.report.applied.map((a) => a.index));
   if (sameSet) {
     trackedEq(ap.cleanText, parse(destructive.text).cleanText,
-      `${label}: accept-all differs from the destructive result`, ctx());
+      `${label}: accept-all differs from the destructive result`, ctx(), 'D');
   }
 }
 
@@ -367,5 +379,16 @@ for (const [defect, hits] of knownDefects) {
   console.error(`\n!!! KNOWN OPEN DEFECT hit ${hits.count}× (first: ${hits.first}): ${defect}`);
   if (process.env.FUZZ_SHOW_DEFECT) console.error('    context: ' + (hits.ctx ?? '(none)'));
 }
-console.log(failures === 0 ? `\nALL INVARIANTS HELD over ${N} seeds × 4 classes` : `\n${failures} failures`);
+const tolerated = [...knownDefects.values()].reduce((n, h) => n + h.count, 0);
+if (failures > 0) {
+  console.log(`\n${failures} failures`);
+} else if (tolerated > 0) {
+  // Not "all invariants held": some were violated and excused by name. Saying
+  // otherwise is how a gate starts lying about what it checked.
+  console.log(
+    `\nNO NEW FAILURES over ${N} seeds × 4 classes — ${tolerated} tolerated hit(s) against ${knownDefects.size} known open defect(s), listed above`,
+  );
+} else {
+  console.log(`\nALL INVARIANTS HELD over ${N} seeds × 4 classes`);
+}
 process.exit(failures === 0 ? 0 : 1);

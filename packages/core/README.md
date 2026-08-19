@@ -52,11 +52,12 @@ destroyed by a patch — it is resolved, re-anchored, or orphaned.
 
 Reading and writing documents:
 
-- `parse(text)` → clean text, comments, edit marks, and any issues found
+- `parse(text)` → clean text, comments, edit marks, frontmatter, a source map,
+  and any issues found
 - `recompose(layer)` → the annotated document; byte-exact for anything `parse`
   produced, and it refuses input it could not read back
 - `addComment(text, options)` → insert a span, point, block, or document comment
-- `removeComment(text, id)` → take one out
+- `removeComment(text, { id })` → take one out; returns `{ text, removed }`
 - `validate(text)` → well-formedness issues for an annotated document
 
 Applying generated edits:
@@ -74,8 +75,11 @@ Identifiers and offsets:
   `existingIds(text)` collects them
 - `AI_REVIEW_PREAMBLE` → the reference prompt that teaches a model to emit a
   conforming batch. Versioned with the spec
-- `blockRanges`, and the `cp*` / `*RawToClean` helpers → offset arithmetic for
-  editor adapters
+- `SPEC_VERSION` → the spec version this library implements, independent of the
+  package version
+- `blockRanges`, `normalizeLineEndings`, `splitCommentContent`, `ID_ALPHABET`,
+  and the `cp*` / `*RawToClean` helpers → block, line-ending, and offset
+  arithmetic for editor adapters
 
 All offsets are Unicode **code points** over clean text (SPEC §7). Line endings
 are normalized to `\n`.

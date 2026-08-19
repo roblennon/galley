@@ -32,7 +32,7 @@
     "test": "pnpm build && vitest run && node scripts/fuzz.mjs 500",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "fuzz": "node scripts/fuzz.mjs 800",
-    "prepack": "cp ../../LICENSE ../../NOTICE . && pnpm build"
+    "prepack": "tsc -p tsconfig.json"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

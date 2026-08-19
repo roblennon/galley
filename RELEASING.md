@@ -60,8 +60,17 @@ notice. The cost is other people's time, not their data.
 
 Nothing is published yet; every package is `"private": true`.
 
-When that changes: drop `private`, add `"publishConfig": {"access": "public"}`,
-and publish from a clean `main` with tests green. `core` is the only package
+`publishConfig.access` is already set, and `LICENSE` and `NOTICE` are committed
+inside the package rather than copied by a script, so they ship whatever happens.
+
+**Never publish with `--ignore-scripts`.** `dist/` is gitignored and built by
+`prepack`; skipping lifecycle scripts yields a tarball with sources and a
+license but no build, while `main` and `types` still point at `dist/index.js`.
+npm gives no warning and the version is burned permanently. Run `npm pack`
+first and check the count — a healthy tarball is ~68 files.
+
+When that changes: drop `private` and publish from a clean `main` with tests
+green. `core` is the only package
 with a reason to be published on its own — the adapters are applications, and
 `codemirror` exists to be shared between them.
 
