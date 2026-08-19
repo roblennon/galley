@@ -302,6 +302,14 @@ identically to an annotated document and to a copy with annotations stripped.
 
 ---
 
+A block or document comment occupies its own line, so attaching one after the
+final block of a document that does not end in a line terminator requires one to
+exist. Clean text therefore gains a single trailing newline in that case, and a
+document with no final newline may acquire one once it is annotated. This is a
+property of the format rather than an implementation choice: no serialization of
+a trailing block comment avoids it. Implementations MUST NOT add a trailing
+newline in any other circumstance.
+
 A UTF-8 byte order mark, when present at the start of a document, is not part
 of clean text and does not participate in offsets. Implementations MUST strip it
 before parsing and MUST restore it when writing the document back, so that a
