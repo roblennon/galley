@@ -57,6 +57,7 @@ button:hover {
   background: #fffaf0;
 }
 
+a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
@@ -167,6 +168,15 @@ button.ghost {
   background: transparent;
   font-size: 19px;
   line-height: 1;
+}
+
+.repo-link {
+  margin-left: 0.15rem;
+  text-decoration: none;
+}
+
+.repo-link svg {
+  display: block;
 }
 
 .icon-button:hover {
