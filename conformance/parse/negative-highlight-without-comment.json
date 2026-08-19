@@ -1,0 +1,14 @@
+{
+  "name": "A highlight not immediately followed by a comment MUST be reported (SPEC §6.1)",
+  "input": "some {==text==} here\n",
+  "cleanText": "some {==text==} here\n",
+  "frontmatter": null,
+  "comments": [],
+  "editMarks": [],
+  "expectedIssues": [
+    {
+      "code": "highlight-without-comment",
+      "severity": "error"
+    }
+  ]
+}

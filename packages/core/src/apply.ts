@@ -554,7 +554,18 @@ export function applyBatch(
       const block = blockAtOrBefore(newBlocks, pos) ?? { start: 0, end: 0 };
       out.anchor = { ...block };
       if (c.placement) {
-        out.placement = { ...c.placement, pos };
+        // `before`/`after` are literal whitespace captured from the document as
+        // it was parsed, replayed verbatim on recomposition. That is exactly
+        // right for a document nothing touched, and wrong once a patch has
+        // rewritten the surrounding text: replaying stale separators adds or
+        // drops blank lines, which can even change the comment's scope on
+        // reparse. When an edit lands in that neighbourhood, drop the recorded
+        // whitespace and let recompose apply conventional spacing.
+        const from = c.placement.pos - c.placement.before.length;
+        const to = c.placement.pos + c.placement.after.length;
+        const disturbed = kept.some((ed) => ed.s <= to && from <= ed.e);
+        if (disturbed) delete out.placement;
+        else out.placement = { ...c.placement, pos };
       }
     }
     newComments.push(out);
@@ -637,10 +648,16 @@ function applyAsEditMarks(
     const nestsMark = parsed.editMarks.some(
       (m) => overlapsRange(ed.s, ed.e, m.range),
     );
+    // An edit that CONTAINS the anchor resolves the comment, and one that sits
+    // wholly INSIDE it edits within the anchored text; both are fine and both
+    // are excluded below. What is left is an edit straddling one boundary,
+    // which cannot be wrapped in an edit mark without interleaving the mark
+    // with the highlight. That is invalid whether or not the patch is
+    // attributed to the comment — the previous attribution exemption only ever
+    // reached this straddle case, and let it through.
     const clipsAnchor = parsed.comments.some(
       (c) =>
         c.scope === 'span' &&
-        !(c.id !== null && ed.attributed.has(c.id)) &&
         overlapsRange(ed.s, ed.e, c.anchor) &&
         !containsRange(ed.s, ed.e, c.anchor) &&
         !(c.anchor.start <= ed.s && ed.e <= c.anchor.end),

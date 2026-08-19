@@ -55,6 +55,11 @@ export function recompose(
         `comment id '${c.id}' is not a valid identifier; it would be emitted as body text and the comment would stop being addressable (SPEC §5.1)`,
       );
     }
+    if (c.placement && (c.placement.pos < 0 || c.placement.pos > cleanLen)) {
+      throw new Error(
+        `comment ${c.id === null ? '(anonymous)' : `[${c.id}]`} placement position ${c.placement.pos} is out of range for clean text of length ${cleanLen}`,
+      );
+    }
     if (
       c.anchor.start < 0 ||
       c.anchor.end < c.anchor.start ||

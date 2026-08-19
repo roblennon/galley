@@ -68,8 +68,13 @@ export function resolveEditMarks(
     if ('destroyed' in t) {
       const block =
         blockAtOrBefore(newBlocks, t.destroyed.s) ?? { start: 0, end: 0 };
+      // `placement` describes where the mark sat in the PRE-edit document. A
+      // demoted comment must not carry it forward: applyBatch's orphan branch
+      // drops it, this one did not, and a stale pos past the new clean length
+      // made recompose emit the document body more than once.
+      const { placement: _stale, ...withoutPlacement } = rest;
       comments.push({
-        ...rest,
+        ...withoutPlacement,
         scope: 'block',
         anchor: { ...block },
         flags: [...c.flags.filter((f) => f !== 'anchor-lost'), 'anchor-lost'],
