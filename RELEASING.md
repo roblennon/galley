@@ -93,8 +93,8 @@ testing is a release channel rather than a branch.
 2. Build and verify in a real vault:
 
    ```sh
-   pnpm --filter @galley/obsidian build
-   pnpm --filter @galley/obsidian install-to-vault /path/to/vault
+   pnpm --filter @galleymd/obsidian build
+   pnpm --filter @galleymd/obsidian install-to-vault /path/to/vault
    ```
 
 3. Tag and publish a GitHub release whose assets are exactly `main.js`,

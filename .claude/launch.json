@@ -4,7 +4,7 @@
     {
       "name": "browser-lab",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@galley/web", "dev", "--port", "5173", "--strictPort"],
+      "runtimeArgs": ["--filter", "@galleymd/web", "dev", "--port", "5173", "--strictPort"],
       "port": 5173
     }
   ]

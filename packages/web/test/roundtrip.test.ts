@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyBatch } from '@galley/core';
+import { applyBatch } from '@galleymd/core';
 import { createDemoBatch } from '../src/roundtrip.js';
 
 describe('sample AI round trip', () => {

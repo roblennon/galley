@@ -34,7 +34,7 @@ pnpm test             # headless smoke suite (stubbed obsidian module)
 pnpm install-to-vault # copy into ../../test-vault (or pass a vault path)
 ```
 
-Parsing and byte-level transformations live in `@galley/core`; reusable
-CodeMirror targeting and presentation models live in `@galley/codemirror`.
+Parsing and byte-level transformations live in `@galleymd/core`; reusable
+CodeMirror targeting and presentation models live in `@galleymd/codemirror`.
 The plugin owns Obsidian UI and lifecycle behavior. Files must use LF line
 endings (Obsidian's default).

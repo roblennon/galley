@@ -1,3 +1,3 @@
-export { AI_REVIEW_PREAMBLE } from '@galley/core';
-export { extractBatchJson, summarizeReport } from '@galley/codemirror';
-export type { ReportSummary } from '@galley/codemirror';
+export { AI_REVIEW_PREAMBLE } from '@galleymd/core';
+export { extractBatchJson, summarizeReport } from '@galleymd/codemirror';
+export type { ReportSummary } from '@galleymd/codemirror';

@@ -1,9 +1,9 @@
 import {
   addComment,
   type AddCommentOptions,
-} from '@galley/core';
-export { computeTarget } from '@galley/codemirror';
-export type { Target } from '@galley/codemirror';
+} from '@galleymd/core';
+export { computeTarget } from '@galleymd/codemirror';
+export type { Target } from '@galleymd/codemirror';
 
 /** The slice of Obsidian's Editor this module needs; kept minimal so the
  * headless smoke harness can drive it with a plain object. */

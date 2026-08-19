@@ -1,5 +1,5 @@
 {
-  "name": "@galley/core",
+  "name": "@galleymd/core",
   "version": "0.2.0",
   "description": "Parse, author, validate, and reconcile inline Markdown annotations (constrained CriticMarkup profile with identifiers).",
   "repository": {

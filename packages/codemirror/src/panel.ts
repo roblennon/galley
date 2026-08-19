@@ -1,4 +1,4 @@
-import { cleanToRaw, cpSlice, cpToUtf16, parse } from '@galley/core';
+import { cleanToRaw, cpSlice, cpToUtf16, parse } from '@galleymd/core';
 
 export interface PanelItem {
   id: string | null;

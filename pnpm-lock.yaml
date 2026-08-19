@@ -10,7 +10,7 @@ importers:
 
   packages/codemirror:
     dependencies:
-      '@galley/core':
+      '@galleymd/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -32,10 +32,10 @@ importers:
 
   packages/obsidian:
     dependencies:
-      '@galley/codemirror':
+      '@galleymd/codemirror':
         specifier: workspace:*
         version: link:../codemirror
-      '@galley/core':
+      '@galleymd/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -72,10 +72,10 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.8
         version: 6.43.8
-      '@galley/codemirror':
+      '@galleymd/codemirror':
         specifier: workspace:*
         version: link:../codemirror
-      '@galley/core':
+      '@galleymd/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:

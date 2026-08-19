@@ -1,5 +1,5 @@
 import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
-import { validate } from '@galley/core';
+import { validate } from '@galleymd/core';
 import { computeTarget, insertComment, type EditorLike } from './annotate.js';
 import { CommentModal } from './modal.js';
 import { galleyEditorExtension, planDecorations } from './decorations.js';
@@ -14,7 +14,7 @@ import {
   extractBatchJson,
   summarizeReport,
 } from './batch.js';
-import { applyBatch, exportFinalText, parse, resolveEditMarks } from '@galley/core';
+import { applyBatch, exportFinalText, parse, resolveEditMarks } from '@galleymd/core';
 import { ReportModal } from './report.js';
 
 export default class GalleyPlugin extends Plugin {

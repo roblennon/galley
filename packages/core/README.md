@@ -1,4 +1,4 @@
-# @galley/core
+# @galleymd/core
 
 Editorial comments that live inside the Markdown file, so an AI editor can read
 them next to the prose they are about.
@@ -13,13 +13,13 @@ package is the reference implementation of
 [the specification](https://github.com/roblennon/galley/blob/main/SPEC.md).
 
 ```sh
-npm install @galley/core
+npm install @galleymd/core
 ```
 
 ## Example
 
 ```js
-import { parse, applyBatch } from '@galley/core';
+import { parse, applyBatch } from '@galleymd/core';
 
 const doc = 'The company {==leveraged its synergies==}{>>[a3f] be concrete<<} last quarter.\n';
 

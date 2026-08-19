@@ -1,5 +1,5 @@
 {
-  "name": "@galley/obsidian",
+  "name": "@galleymd/obsidian",
   "version": "0.1.0",
   "description": "Obsidian plugin: inline editorial comments in Markdown, on the galley annotation format.",
   "repository": {
@@ -20,8 +20,8 @@
     "install-to-vault": "node scripts/install-to-vault.mjs"
   },
   "dependencies": {
-    "@galley/codemirror": "workspace:*",
-    "@galley/core": "workspace:*"
+    "@galleymd/codemirror": "workspace:*",
+    "@galleymd/core": "workspace:*"
   },
   "devDependencies": {
     "@codemirror/state": "^6.7.1",

@@ -1,4 +1,4 @@
-import type { ApplyReport, PatchBatch } from '@galley/core';
+import type { ApplyReport, PatchBatch } from '@galleymd/core';
 
 export function extractBatchJson(
   input: string,

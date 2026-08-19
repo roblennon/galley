@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @galley/web... build",
+  "buildCommand": "pnpm --filter @galleymd/web... build",
   "outputDirectory": "packages/web/dist",
   "headers": [
     {

@@ -1,5 +1,5 @@
 {
-  "name": "@galley/codemirror",
+  "name": "@galleymd/codemirror",
   "version": "0.1.0",
   "description": "Pure editor models shared by Galley CodeMirror adapters.",
   "repository": {
@@ -29,7 +29,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@galley/core": "workspace:*"
+    "@galleymd/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

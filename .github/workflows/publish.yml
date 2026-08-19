@@ -2,7 +2,9 @@ name: Publish
 
 # Trusted publishing: npm authenticates this workflow over OIDC, so no token is
 # stored anywhere. It also attaches provenance — a verifiable link between the
-# published tarball and the commit and workflow that produced it.
+# published tarball and the commit and workflow that produced it. Optional;
+# a local `npm publish` works too. This exists for the provenance and for
+# releases that should not depend on one person's laptop being logged in.
 on:
   workflow_dispatch:
     inputs:
@@ -38,7 +40,7 @@ jobs:
       - run: pnpm build
       - run: pnpm test
 
-      - name: Publish @galley/core
+      - name: Publish @galleymd/core
         working-directory: packages/core
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then

@@ -7,14 +7,14 @@ import {
   removeComment,
   resolveEditMarks,
   AI_REVIEW_PREAMBLE,
-} from '@galley/core';
+} from '@galleymd/core';
 import {
   buildPanelModel,
   computeTarget,
   extractBatchJson,
   summarizeReport,
   type ReportSummary,
-} from '@galley/codemirror';
+} from '@galleymd/codemirror';
 import { GalleyEditor, type SelectionSnapshot } from './editor.js';
 import {
   downloadMarkdown,

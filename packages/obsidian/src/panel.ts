@@ -1,8 +1,8 @@
 import { ItemView, MarkdownView, WorkspaceLeaf } from 'obsidian';
-import { removeComment } from '@galley/core';
-import { buildPanelModel } from '@galley/codemirror';
-export { buildPanelModel } from '@galley/codemirror';
-export type { PanelItem } from '@galley/codemirror';
+import { removeComment } from '@galleymd/core';
+import { buildPanelModel } from '@galleymd/codemirror';
+export { buildPanelModel } from '@galleymd/codemirror';
+export type { PanelItem } from '@galleymd/codemirror';
 import type GalleyPlugin from './main.js';
 
 export const PANEL_VIEW_TYPE = 'galley-comments';

@@ -6,7 +6,7 @@ import {
   snapRawToClean,
   utf16ToCp,
   type AddCommentOptions,
-} from '@galley/core';
+} from '@galleymd/core';
 
 export interface CollapsedContext {
   pointValid: boolean;

@@ -7,9 +7,9 @@ browser; the hosting origin only serves the static application assets.
 From the workspace root:
 
 ```sh
-pnpm --filter @galley/web dev
-pnpm --filter @galley/web... build
-pnpm --filter @galley/web test
+pnpm --filter @galleymd/web dev
+pnpm --filter @galleymd/web... build
+pnpm --filter @galleymd/web test
 ```
 
 The dependency-inclusive build command is intentional: workspace dependencies

@@ -1,4 +1,4 @@
-/** Seeded property fuzzer for @galley/core (node scripts/fuzz.mjs [N]).
+/** Seeded property fuzzer for @galleymd/core (node scripts/fuzz.mjs [N]).
  * Found the zero-width and same-position recompose ordering bugs that the
  * example-based suite missed. Invariants:
  *  A. addComment-built docs: no error issues; byte-exact round trip;

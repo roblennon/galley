@@ -1,5 +1,5 @@
 {
-  "name": "@galley/web",
+  "name": "@galleymd/web",
   "version": "0.1.0",
   "description": "No-login browser lab for trying Galley with local Markdown files.",
   "repository": {
@@ -25,8 +25,8 @@
     "@codemirror/language": "^6.12.4",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.8",
-    "@galley/codemirror": "workspace:*",
-    "@galley/core": "workspace:*"
+    "@galleymd/codemirror": "workspace:*",
+    "@galleymd/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

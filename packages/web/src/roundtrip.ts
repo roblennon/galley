@@ -1,4 +1,4 @@
-import { cpSlice, parse, type PatchBatch } from '@galley/core';
+import { cpSlice, parse, type PatchBatch } from '@galleymd/core';
 
 export function createDemoBatch(text: string): PatchBatch | null {
   const parsed = parse(text);

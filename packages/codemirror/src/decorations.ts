@@ -1,4 +1,4 @@
-import { parse } from '@galley/core';
+import { parse } from '@galleymd/core';
 
 export interface DecoPlanItem {
   /**

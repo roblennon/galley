@@ -99,7 +99,7 @@ flagged as anchor-lost. It is never silently dropped.
 ```sh
 pnpm install
 pnpm build
-pnpm --filter @galley/web dev
+pnpm --filter @galleymd/web dev
 ```
 
 Then open a local Markdown file, select a sentence, and leave a comment.
@@ -107,7 +107,7 @@ Then open a local Markdown file, select a sentence, and leave a comment.
 For the Obsidian plugin:
 
 ```sh
-pnpm --filter @galley/obsidian install-to-vault /path/to/your/vault
+pnpm --filter @galleymd/obsidian install-to-vault /path/to/your/vault
 ```
 
 ## Status

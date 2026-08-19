@@ -11,7 +11,7 @@ export type ReadingSegment =
   | { kind: 'insertion'; text: string }
   | { kind: 'substitution'; from: string; to: string };
 
-import { splitCommentContent } from '@galley/core';
+import { splitCommentContent } from '@galleymd/core';
 
 const PATTERN =
   /\{==([\s\S]*?)==\}\{>>([\s\S]*?)<<\}|\{>>([\s\S]*?)<<\}|\{--([\s\S]*?)--\}|\{\+\+([\s\S]*?)\+\+\}|\{~~([\s\S]*?)~>([\s\S]*?)~~\}/g;

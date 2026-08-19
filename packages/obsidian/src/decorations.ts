@@ -7,9 +7,9 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from '@codemirror/view';
-import { planDecorations, type DecoPlanItem } from '@galley/codemirror';
-export { planDecorations } from '@galley/codemirror';
-export type { DecoPlanItem } from '@galley/codemirror';
+import { planDecorations, type DecoPlanItem } from '@galleymd/codemirror';
+export { planDecorations } from '@galleymd/codemirror';
+export type { DecoPlanItem } from '@galleymd/codemirror';
 
 class ChipWidget extends WidgetType {
   constructor(

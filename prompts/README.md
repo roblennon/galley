@@ -7,7 +7,7 @@ implementation in any language can use them without depending on this one.
   to ask a model for a conforming patch batch. Its frontmatter declares the spec
   version it targets.
 
-`@galley/core` exports the same text as `AI_REVIEW_PREAMBLE`, so bundled adapters
+`@galleymd/core` exports the same text as `AI_REVIEW_PREAMBLE`, so bundled adapters
 need no file I/O. `packages/core/test/prompt-sync.test.ts` asserts the two stay
 byte-identical, and that the prompt never teaches a rule SPEC.md does not have —
 the same coupling that keeps SPEC §13's examples and the conformance fixtures in

@@ -19,7 +19,7 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from '@codemirror/view';
-import { planDecorations, type DecoPlanItem } from '@galley/codemirror';
+import { planDecorations, type DecoPlanItem } from '@galleymd/codemirror';
 import { minimalTextChange } from './change.js';
 
 export interface SelectionSnapshot {
