@@ -94,6 +94,14 @@ flagged as anchor-lost. It is never silently dropped.
 | [`prompts/`](prompts) | The reference prompt, versioned with the spec. How a model learns the format. |
 | [`RELEASING.md`](RELEASING.md) | Maintainer release process: promotion, plugin betas, versioning. |
 
+## Install
+
+```sh
+npm install @galleymd/core
+```
+
+[![npm](https://img.shields.io/npm/v/@galleymd/core)](https://www.npmjs.com/package/@galleymd/core)
+
 ## Try it
 
 ```sh
@@ -112,10 +120,15 @@ pnpm --filter @galleymd/obsidian install-to-vault /path/to/your/vault
 
 ## Status
 
-Pre-1.0, and honest about it. The spec is at version 1 with **Draft** status; the
-core library is 0.2.x. The format's shape is settled enough to build against —
-scopes, identifiers, anchoring, patches, and responses are all specified — but
-nothing is on npm yet and the version number is a promise nobody has made.
+Pre-1.0, and honest about it. The spec is at version 1 with **Draft** status, and
+`@galleymd/core` is published at 0.2.x. The format's shape is settled enough to
+build against — scopes, identifiers, anchoring, patches, and responses are all
+specified — but pre-1.0 means a minor version bump may still break the API. The
+adapters are not published; they are applications, not libraries.
+
+The npm scope carries a suffix because the bare `galley` name on npm belongs to
+an unrelated archived project, which also blocks the matching organization. The
+format, the repository, and the domain are all just Galley.
 
 Spec versions and package versions move independently. A change that would make a
 conforming v1 document parse differently requires a major spec version, and there

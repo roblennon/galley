@@ -58,7 +58,8 @@ does.
 **Recoverable.** A bad publish is fixed by a patch release and a deprecation
 notice. The cost is other people's time, not their data.
 
-Nothing is published yet; every package is `"private": true`.
+`@galleymd/core` is published. The adapters stay `"private": true` — they are
+applications and a shared internal, not libraries anyone should install.
 
 `publishConfig.access` is already set, and `LICENSE` and `NOTICE` are committed
 inside the package rather than copied by a script, so they ship whatever happens.

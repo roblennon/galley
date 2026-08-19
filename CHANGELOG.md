@@ -6,6 +6,16 @@ and package versions move independently — see `SPEC.md` §12.
 This project has not had a public release yet. Everything below is pre-1.0 and
 the format is still allowed to move.
 
+## @galleymd/core 0.2.0 — 2026-08-19
+
+First public release. Spec version 1, status Draft.
+
+Published under the `@galleymd` scope: npm's bare `galley` name belongs to an
+unrelated archived project, which also blocks an organization of that name.
+
+Everything below was in the tree before this release; it is listed here because
+this is the first version anyone outside the repository can install.
+
 ## Unreleased
 
 ### Spec
