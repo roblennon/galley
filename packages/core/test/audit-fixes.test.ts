@@ -120,6 +120,33 @@ describe('applyBatch input hardening', () => {
     expect(validate(text).valid).toBe(true);
   });
 
+  // A skeptic pass caught the first version of this guard rejecting every
+  // paragraph split in any document carrying a document-level note, because a
+  // document anchor spans the whole file. Only a span anchor can be split.
+  it('allows a paragraph split in a document that has a document-scope comment', () => {
+    const doc = '{>>[d1d] overall<<}\n\nHello world.\n';
+    const { text, report } = applyBatch(doc, {
+      spec: 1,
+      responses: [{ comment: 'd1d', status: 'declined' }],
+      patches: [{ type: 'span', find: 'Hello', replace: 'Hi\n\nthere', reason: 'split' }],
+    });
+    expect(report.rejected).toEqual([]);
+    expect(report.applied).toHaveLength(1);
+    expect(validate(text).valid).toBe(true);
+  });
+
+  it('allows a paragraph split that lands inside a block comment\u2019s own block', () => {
+    const doc = 'One two three.\n\n{>>[b1] note<<}\n';
+    const { text, report } = applyBatch(doc, {
+      spec: 1,
+      responses: [{ comment: 'b1', status: 'declined' }],
+      patches: [{ type: 'span', find: 'two', replace: 'X\n\nY', reason: 'split' }],
+    });
+    expect(report.rejected).toEqual([]);
+    expect(validate(text).valid).toBe(true);
+    expect(text).toContain('[b1]');
+  });
+
   it('allows a blank line in replace outside any annotation', () => {
     const doc = 'Alpha bravo.\n\nKeep {--this --}word.\n';
     const { text, report } = applyBatch(doc, {

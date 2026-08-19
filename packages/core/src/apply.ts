@@ -78,6 +78,12 @@ function insideAnnotationOf(
   marks: readonly EditMark[],
 ): boolean {
   for (const c of comments) {
+    // Only a SPAN anchor can be split by a new block boundary. A point anchor
+    // is zero-width; a block anchor IS a block, and splitting it re-anchors the
+    // comment rather than violating §6.2; a document anchor covers the whole
+    // file, so testing it rejected every paragraph split in any document that
+    // happened to carry a document-level note.
+    if (c.scope !== 'span') continue;
     if (c.anchor.start < end && start < c.anchor.end) return true;
   }
   for (const m of marks) {
