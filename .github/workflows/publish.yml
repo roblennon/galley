@@ -1,0 +1,48 @@
+name: Publish
+
+# Trusted publishing: npm authenticates this workflow over OIDC, so no token is
+# stored anywhere. It also attaches provenance — a verifiable link between the
+# published tarball and the commit and workflow that produced it.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Pack and verify without publishing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm 11.5.1+; the version bundled with Node
+      # 22 is older than that.
+      - run: npm install -g npm@latest
+      - run: npm --version
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+
+      - name: Publish @galley/core
+        working-directory: packages/core
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --access public --dry-run
+          else
+            npm publish --access public
+          fi
