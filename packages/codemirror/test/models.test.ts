@@ -51,6 +51,29 @@ describe('planDecorations', () => {
     expect(plan.some((item) => item.kind === 'hide')).toBe(false);
     expect(plan.some((item) => item.kind === 'chip' && item.id === 'p2c')).toBe(true);
   });
+
+  it('describes revisions without exposing their raw syntax', () => {
+    const revisions = 'Add {++new++}, cut {--old--}, change {~~before~>after~~}.';
+    const edits = planDecorations(revisions, [{ from: 0, to: 0 }])
+      .filter((item) => item.kind === 'edit');
+
+    expect(edits).toMatchObject([
+      { editKind: 'insertion', original: '', proposed: 'new' },
+      { editKind: 'deletion', original: 'old', proposed: '' },
+      { editKind: 'substitution', original: 'before', proposed: 'after' },
+    ]);
+  });
+
+  it('reveals revision syntax only when the cursor is inside it', () => {
+    const revision = 'A {~~before~>after~~} word.';
+    const from = revision.indexOf('{~~');
+    const to = revision.indexOf('~~}') + 3;
+
+    expect(planDecorations(revision, [{ from: to, to }]))
+      .toEqual([expect.objectContaining({ kind: 'edit', from, to })]);
+    expect(planDecorations(revision, [{ from: from + 3, to: from + 3 }]))
+      .toEqual([]);
+  });
 });
 
 describe('buildPanelModel', () => {

@@ -15,6 +15,7 @@
   --highlight: rgba(244, 190, 63, 0.32);
   --blue-soft: #e5edf7;
   --danger: #a33b31;
+  --success: #276749;
   color: var(--ink);
   background: var(--canvas);
 }
@@ -339,9 +340,24 @@ button.ghost {
   line-height: 1.5;
 }
 
-.galley-edit-mark {
-  border-radius: 3px;
-  background: var(--blue-soft);
+.galley-revision {
+  display: inline;
+}
+
+.galley-deletion {
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.galley-insertion {
+  color: var(--success);
+  text-decoration: none;
+  border-bottom: 2px solid currentColor;
+}
+
+.galley-revision-substitution .galley-deletion + .galley-insertion {
+  margin-left: 0.3em;
 }
 
 .comments-panel {

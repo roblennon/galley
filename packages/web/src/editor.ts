@@ -100,6 +100,47 @@ class NoteWidget extends WidgetType {
   }
 }
 
+class RevisionWidget extends WidgetType {
+  constructor(
+    private readonly kind: 'insertion' | 'deletion' | 'substitution',
+    private readonly original: string,
+    private readonly proposed: string,
+  ) {
+    super();
+  }
+
+  override eq(other: RevisionWidget): boolean {
+    return other.kind === this.kind &&
+      other.original === this.original &&
+      other.proposed === this.proposed;
+  }
+
+  override toDOM(): HTMLElement {
+    const element = document.createElement('span');
+    element.className = `galley-revision galley-revision-${this.kind}`;
+    element.setAttribute('aria-label', this.label());
+    if (this.kind !== 'insertion') {
+      const deletion = document.createElement('del');
+      deletion.className = 'galley-deletion';
+      deletion.textContent = this.original;
+      element.append(deletion);
+    }
+    if (this.kind !== 'deletion') {
+      const insertion = document.createElement('ins');
+      insertion.className = 'galley-insertion';
+      insertion.textContent = this.proposed;
+      element.append(insertion);
+    }
+    return element;
+  }
+
+  private label(): string {
+    if (this.kind === 'insertion') return `Inserted: ${this.proposed}`;
+    if (this.kind === 'deletion') return `Deleted: ${this.original}`;
+    return `Changed ${this.original} to ${this.proposed}`;
+  }
+}
+
 function toDecorations(plan: DecoPlanItem[]): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (const item of plan) {
@@ -125,11 +166,17 @@ function toDecorations(plan: DecoPlanItem[]): DecorationSet {
           ),
         }),
       );
-    } else {
+    } else if (item.editKind) {
       builder.add(
         item.from,
         item.to,
-        Decoration.mark({ class: 'galley-edit-mark' }),
+        Decoration.replace({
+          widget: new RevisionWidget(
+            item.editKind,
+            item.original ?? '',
+            item.proposed ?? '',
+          ),
+        }),
       );
     }
   }
