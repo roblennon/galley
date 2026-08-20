@@ -98,7 +98,7 @@ root.innerHTML = `
         <button id="demo-response" type="button">Run sample response</button>
       </div>
       <label class="review-label" for="patch-input">AI patch response</label>
-      <textarea id="patch-input" rows="10" placeholder="Paste the JSON patch batch here…"></textarea>
+      <textarea class="patch-input" id="patch-input" rows="10" placeholder="Paste the JSON patch batch here…"></textarea>
       <div class="review-actions review-submit">
         <button class="primary" id="apply-patch" type="button">Apply response</button>
       </div>

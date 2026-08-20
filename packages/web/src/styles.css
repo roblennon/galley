@@ -38,6 +38,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -58,9 +59,6 @@ button:hover {
 }
 
 a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: 3px solid rgba(189, 91, 50, 0.32);
   outline-offset: 2px;
@@ -616,7 +614,7 @@ button.ghost {
   font-weight: 650;
 }
 
-#patch-input {
+.patch-input {
   width: 100%;
   min-height: 220px;
   resize: vertical;
@@ -628,6 +626,18 @@ button.ghost {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 14px;
   line-height: 1.55;
+}
+
+/* Bordered controls use one contiguous focus stroke. A detached outline would
+   stack with the permanent border and read as multiple focus rings. Keep this
+   state after component borders so it remains the final border treatment. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--accent-strong);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-strong);
 }
 
 .review-submit {
