@@ -593,11 +593,44 @@ button.ghost {
   font-size: 25px;
 }
 
-.review-intro,
+.review-step p,
 .tracked-actions p {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.55;
+}
+
+.review-step {
+  margin-top: 1.15rem;
+}
+
+.review-step + .review-step {
+  border-top: 1px solid var(--line);
+  padding-top: 1.15rem;
+}
+
+.review-step-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.review-step-heading h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.review-step p {
+  margin: 0.35rem 0 0;
+}
+
+.step-number {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .review-actions {
@@ -607,11 +640,31 @@ button.ghost {
   margin: 1rem 0;
 }
 
+.review-step-actions {
+  margin: 0.65rem 0 0;
+}
+
 .review-label {
   display: block;
-  margin: 1.1rem 0 0.45rem;
+  margin: 0.85rem 0 0.45rem;
   font-size: 16px;
   font-weight: 650;
+}
+
+.review-prompt {
+  display: block;
+  width: 100%;
+  height: 8.25rem;
+  resize: vertical;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem;
+  color: var(--muted);
+  background: var(--canvas);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .patch-input {
