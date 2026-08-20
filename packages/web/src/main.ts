@@ -71,7 +71,7 @@ root.innerHTML = `
       </div>
       <aside class="comments-panel" id="comments-panel" data-collapsed="false" aria-label="Document comments">
         <div class="panel-header">
-          <button class="panel-toggle" id="panel-toggle" type="button" aria-expanded="true" aria-label="Collapse comments panel" data-tooltip="Collapse comments" title="Collapse comments">›</button>
+          <button class="panel-toggle" id="panel-toggle" type="button" aria-expanded="true" aria-label="Collapse comments panel" data-tooltip="Collapse comments" data-tooltip-align="end" title="Collapse comments">›</button>
           <h2>Comments</h2>
           <span class="count" id="comment-count">0</span>
         </div>

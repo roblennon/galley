@@ -345,8 +345,11 @@ button.ghost {
 }
 
 .comments-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
   border-left: 1px solid var(--line);
   background: var(--canvas);
 }
@@ -387,6 +390,8 @@ button.ghost {
   display: flex;
   flex-direction: column;
   gap: 0;
+  min-height: 0;
+  overflow: auto;
   padding: 0 0.85rem;
 }
 
@@ -775,6 +780,17 @@ textarea:focus-visible {
 
   .comments-panel[data-collapsed="true"] .count {
     display: none;
+  }
+
+  .comments-panel:not([data-collapsed="true"]) .panel-toggle::after {
+    right: auto;
+    left: 0;
+    transform: translate(0, -3px);
+  }
+
+  .comments-panel:not([data-collapsed="true"]) .panel-toggle:hover::after,
+  .comments-panel:not([data-collapsed="true"]) .panel-toggle:focus-visible::after {
+    transform: translate(0, 0);
   }
 }
 
