@@ -15,6 +15,7 @@
   --highlight: rgba(244, 190, 63, 0.32);
   --blue-soft: #e5edf7;
   --danger: #a33b31;
+  --success: #276749;
   color: var(--ink);
   background: var(--canvas);
 }
@@ -38,6 +39,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -58,9 +60,6 @@ button:hover {
 }
 
 a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: 3px solid rgba(189, 91, 50, 0.32);
   outline-offset: 2px;
@@ -341,14 +340,32 @@ button.ghost {
   line-height: 1.5;
 }
 
-.galley-edit-mark {
-  border-radius: 3px;
-  background: var(--blue-soft);
+.galley-revision {
+  display: inline;
+}
+
+.galley-deletion {
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.galley-insertion {
+  color: var(--success);
+  text-decoration: none;
+  border-bottom: 2px solid currentColor;
+}
+
+.galley-revision-substitution .galley-deletion + .galley-insertion {
+  margin-left: 0.3em;
 }
 
 .comments-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
   border-left: 1px solid var(--line);
   background: var(--canvas);
 }
@@ -389,6 +406,8 @@ button.ghost {
   display: flex;
   flex-direction: column;
   gap: 0;
+  min-height: 0;
+  overflow: auto;
   padding: 0 0.85rem;
 }
 
@@ -595,11 +614,44 @@ button.ghost {
   font-size: 25px;
 }
 
-.review-intro,
+.review-step p,
 .tracked-actions p {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.55;
+}
+
+.review-step {
+  margin-top: 1.15rem;
+}
+
+.review-step + .review-step {
+  border-top: 1px solid var(--line);
+  padding-top: 1.15rem;
+}
+
+.review-step-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.review-step-heading h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.review-step p {
+  margin: 0.35rem 0 0;
+}
+
+.step-number {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .review-actions {
@@ -609,14 +661,34 @@ button.ghost {
   margin: 1rem 0;
 }
 
+.review-step-actions {
+  margin: 0.65rem 0 0;
+}
+
 .review-label {
   display: block;
-  margin: 1.1rem 0 0.45rem;
+  margin: 0.85rem 0 0.45rem;
   font-size: 16px;
   font-weight: 650;
 }
 
-#patch-input {
+.review-prompt {
+  display: block;
+  width: 100%;
+  height: 8.25rem;
+  resize: vertical;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem;
+  color: var(--muted);
+  background: var(--canvas);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.patch-input {
   width: 100%;
   min-height: 220px;
   resize: vertical;
@@ -628,6 +700,30 @@ button.ghost {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 14px;
   line-height: 1.55;
+}
+
+/* Bordered controls use one contiguous focus stroke. A detached outline would
+   stack with the permanent border and read as multiple focus rings. Keep this
+   state after component borders so it remains the final border treatment. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--accent-strong);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-strong);
+}
+
+@media (forced-colors: active) {
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
 }
 
 .review-submit {
@@ -712,6 +808,17 @@ button.ghost {
 
   .comments-panel[data-collapsed="true"] .count {
     display: none;
+  }
+
+  .comments-panel:not([data-collapsed="true"]) .panel-toggle::after {
+    right: auto;
+    left: 0;
+    transform: translate(0, -3px);
+  }
+
+  .comments-panel:not([data-collapsed="true"]) .panel-toggle:hover::after,
+  .comments-panel:not([data-collapsed="true"]) .panel-toggle:focus-visible::after {
+    transform: translate(0, 0);
   }
 }
 

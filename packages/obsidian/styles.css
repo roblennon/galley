@@ -49,11 +49,6 @@
   font-weight: 500;
 }
 
-.galley-edit-mark {
-  background: rgba(90, 160, 255, 0.16);
-  border-radius: 3px;
-}
-
 .galley-deletion {
   color: var(--text-error, #c0392b);
   text-decoration: line-through;
@@ -62,6 +57,9 @@
   color: var(--text-success, #27ae60);
   text-decoration: none;
   border-bottom: 1px dashed currentColor;
+}
+.galley-deletion + .galley-insertion {
+  margin-left: 0.3em;
 }
 
 .galley-comment-input {

@@ -12,6 +12,9 @@ export interface DecoPlanItem {
   id?: string | null;
   body?: string;
   scope?: string;
+  editKind?: 'insertion' | 'deletion' | 'substitution';
+  original?: string;
+  proposed?: string;
 }
 
 /**
@@ -27,7 +30,12 @@ export function planDecorations(
 ): DecoPlanItem[] {
   const parsed = parse(text);
   const touched = (from: number, to: number): boolean =>
-    selections.some((selection) => selection.from <= to && from <= selection.to);
+    selections.some((selection) => {
+      if (selection.from === selection.to) {
+        return from < selection.from && selection.from < to;
+      }
+      return selection.from < to && from < selection.to;
+    });
   const plan: DecoPlanItem[] = [];
 
   for (const comment of parsed.comments) {
@@ -68,7 +76,14 @@ export function planDecorations(
   }
   for (const mark of parsed.editMarks) {
     if (!mark.source || touched(mark.source.start, mark.source.end)) continue;
-    plan.push({ from: mark.source.start, to: mark.source.end, kind: 'edit' });
+    plan.push({
+      from: mark.source.start,
+      to: mark.source.end,
+      kind: 'edit',
+      editKind: mark.kind,
+      original: mark.original,
+      proposed: mark.proposed,
+    });
   }
   return plan.sort((a, b) => a.from - b.from || a.to - b.to);
 }

@@ -71,7 +71,7 @@ root.innerHTML = `
       </div>
       <aside class="comments-panel" id="comments-panel" data-collapsed="false" aria-label="Document comments">
         <div class="panel-header">
-          <button class="panel-toggle" id="panel-toggle" type="button" aria-expanded="true" aria-label="Collapse comments panel" data-tooltip="Collapse comments" title="Collapse comments">›</button>
+          <button class="panel-toggle" id="panel-toggle" type="button" aria-expanded="true" aria-label="Collapse comments panel" data-tooltip="Collapse comments" data-tooltip-align="end" title="Collapse comments">›</button>
           <h2>Comments</h2>
           <span class="count" id="comment-count">0</span>
         </div>
@@ -92,16 +92,31 @@ root.innerHTML = `
         </div>
         <button class="ghost dialog-close" id="review-close" type="button" aria-label="Close AI handoff">×</button>
       </div>
-      <p class="review-intro">Copy the annotated document to any AI editor, then paste its JSON patch response here. The browser validates every response before changing the document.</p>
-      <div class="review-actions">
-        <button id="copy-review" type="button">Copy document + instructions</button>
-        <button id="demo-response" type="button">Run sample response</button>
-      </div>
-      <label class="review-label" for="patch-input">AI patch response</label>
-      <textarea id="patch-input" rows="10" placeholder="Paste the JSON patch batch here…"></textarea>
-      <div class="review-actions review-submit">
-        <button class="primary" id="apply-patch" type="button">Apply response</button>
-      </div>
+      <section class="review-step" aria-labelledby="review-step-one">
+        <div class="review-step-heading">
+          <span class="step-number">Step 1</span>
+          <h3 id="review-step-one">Send comments to an AI</h3>
+        </div>
+        <p>These instructions ask an AI to address every comment and return edits in Galley’s structured patch format.</p>
+        <label class="review-label" for="review-prompt">Instructions + annotated document</label>
+        <textarea class="review-prompt" id="review-prompt" rows="5" readonly></textarea>
+        <div class="review-actions review-step-actions">
+          <button id="copy-review" type="button">Copy instructions + document</button>
+        </div>
+      </section>
+      <section class="review-step" aria-labelledby="review-step-two">
+        <div class="review-step-heading">
+          <span class="step-number">Step 2</span>
+          <h3 id="review-step-two">Paste the AI response</h3>
+        </div>
+        <p>Galley validates the structured patch before changing your document.</p>
+        <label class="review-label" for="patch-input">AI patch response</label>
+        <textarea class="patch-input" id="patch-input" rows="10" placeholder="Paste the JSON patch batch here…"></textarea>
+        <div class="review-actions review-submit">
+          <button id="demo-response" type="button">Run sample response</button>
+          <button class="primary" id="apply-patch" type="button">Apply response</button>
+        </div>
+      </section>
       <section class="report" id="report" aria-live="polite" hidden></section>
       <section class="tracked-actions" id="tracked-actions" hidden>
         <h3>Review proposed changes</h3>
@@ -140,6 +155,7 @@ const commentBody = byId<HTMLTextAreaElement>('comment-body');
 const notice = byId<HTMLDivElement>('notice');
 const reviewDialog = byId<HTMLDialogElement>('review-dialog');
 const reviewClose = byId<HTMLButtonElement>('review-close');
+const reviewPrompt = byId<HTMLTextAreaElement>('review-prompt');
 const copyReview = byId<HTMLButtonElement>('copy-review');
 const demoResponse = byId<HTMLButtonElement>('demo-response');
 const patchInput = byId<HTMLTextAreaElement>('patch-input');
@@ -582,6 +598,7 @@ modeToggle.addEventListener('click', () => {
 aiReview.addEventListener('click', () => {
   report.hidden = true;
   updateTrackedActions();
+  reviewPrompt.value = AI_REVIEW_PREAMBLE + editor.text;
   reviewDialog.showModal();
 });
 reviewClose.addEventListener('click', () => reviewDialog.close());
@@ -590,7 +607,7 @@ reviewDialog.addEventListener('click', (event) => {
 });
 copyReview.addEventListener('click', async () => {
   try {
-    await navigator.clipboard.writeText(AI_REVIEW_PREAMBLE + editor.text);
+    await navigator.clipboard.writeText(reviewPrompt.value);
     showNotice('Annotated document and instructions copied.');
   } catch {
     showNotice('Clipboard access was unavailable. Select and copy the document manually.');
