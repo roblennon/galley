@@ -714,6 +714,18 @@ textarea:focus-visible {
   box-shadow: 0 0 0 2px var(--accent-strong);
 }
 
+@media (forced-colors: active) {
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+}
+
 .review-submit {
   justify-content: flex-end;
   margin-top: 0.7rem;

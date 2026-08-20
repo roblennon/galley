@@ -118,16 +118,19 @@ class RevisionWidget extends WidgetType {
   override toDOM(): HTMLElement {
     const element = document.createElement('span');
     element.className = `galley-revision galley-revision-${this.kind}`;
+    element.setAttribute('role', 'group');
     element.setAttribute('aria-label', this.label());
     if (this.kind !== 'insertion') {
       const deletion = document.createElement('del');
       deletion.className = 'galley-deletion';
+      deletion.setAttribute('aria-hidden', 'true');
       deletion.textContent = this.original;
       element.append(deletion);
     }
     if (this.kind !== 'deletion') {
       const insertion = document.createElement('ins');
       insertion.className = 'galley-insertion';
+      insertion.setAttribute('aria-hidden', 'true');
       insertion.textContent = this.proposed;
       element.append(insertion);
     }
