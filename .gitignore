@@ -6,3 +6,6 @@ test-vault/
 .vercel
 .env*
 .cursor-debug-loop/
+
+# opencode per-repo pointer (vault-local, never committed)
+opencode.json
